@@ -356,6 +356,17 @@ const CSS = `
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}.pulse{animation:pulse 1.2s infinite;}
 `;
 
+function FLD({label,value,onChange,placeholder}){
+  return (
+    <div className="field"><div className="field-label">{label}</div><input value={value} onChange={onChange} placeholder={placeholder}/></div>
+  );
+}
+function TXA({label,value,onChange,placeholder,rows=2}){
+  return (
+    <div className="field"><div className="field-label">{label}</div><textarea rows={rows} value={value} onChange={onChange} placeholder={placeholder}/></div>
+  );
+}
+
 export default function TheGreek(){
   const today=new Date();today.setHours(0,0,0,0);
   const [appMode,setAppMode]=useState("client"); // client | pinEntry | trainer | assistant
@@ -540,13 +551,6 @@ export default function TheGreek(){
 
   const slots=selectedDate?generateSlots(selectedDate):[];
   const pendingCount=requests.filter(r=>r.status==="pending").length;
-
-  const FLD=({label,value,onChange,placeholder})=>(
-    <div className="field"><div className="field-label">{label}</div><input value={value} onChange={onChange} placeholder={placeholder}/></div>
-  );
-  const TXA=({label,value,onChange,placeholder,rows=2})=>(
-    <div className="field"><div className="field-label">{label}</div><textarea rows={rows} value={value} onChange={onChange} placeholder={placeholder}/></div>
-  );
 
   return(
     <div style={{minHeight:"100vh",background:"#080808",fontFamily:"'Raleway',sans-serif",color:"#f0ead6"}}>
