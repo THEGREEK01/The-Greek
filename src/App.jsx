@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 const TRAINER_PIN = "030410";
 const ASSISTANT_PIN = "017235";
 const EMAILJS_SERVICE_ID = "service_i6rsgam";
-const EMAILJS_TEMPLATE_ID = "template_iz4I63I";
+const EMAILJS_TEMPLATE_ID = "template_iz4l63l";
 const EMAILJS_PUBLIC_KEY = "sqaNe63TyoTii8GHk";
 
 const WORKING_HOURS = { weekday:{start:6,end:21}, weekend:{start:7,end:14} };
