@@ -312,7 +312,7 @@ async function saveRequests(reqs){try{await window.storage.set("booking-requests
 async function loadClients(){try{const r=await window.storage.get("clients");return r?JSON.parse(r.value):[];}catch{return[];}}
 async function saveClients(c){try{await window.storage.set("clients",JSON.stringify(c));}catch{}}
 
-const EMPTY_CLIENT = {name:"",phone:"",email:"",birthday:"",address:"",emergencyContact:"",age:"",weight:"",height:"",bodyFat:"",familyInfo:"",medicalConditions:"",injuries:"",medications:"",allergies:"",fitnessGoal:"",experienceLevel:"",trainingProgram:"",sessionsPerWeek:"",preferredTime:"",notes:"",trainingHistory:[],totalSessions:0,status:"active",clientCode:""};
+const EMPTY_CLIENT = {name:"",phone:"",email:"",birthday:"",address:"",emergencyContact:"",age:"",weight:"",height:"",bodyFat:"",familyInfo:"",medicalConditions:"",injuries:"",medications:"",allergies:"",fitnessGoal:"",experienceLevel:"",trainingProgram:"",sessionsPerWeek:"",preferredTime:"",notes:"",trainingHistory:[],totalSessions:0,status:"active",clientCode:"",wantsCancelAlerts:null};
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Raleway:wght@300;400;500&display=swap');
@@ -385,6 +385,7 @@ export default function TheGreek(){
   const [portalClient,setPortalClient]=useState(null);
   const [portalError,setPortalError]=useState(false);
   const [clientSearch,setClientSearch]=useState("");
+  const [alertPrefResult,setAlertPrefResult]=useState(null);
   const [requests,setRequests]=useState([]);
   const [clients,setClients]=useState([]);
   const [tView,setTView]=useState("requests");
@@ -396,6 +397,26 @@ export default function TheGreek(){
   const [newClient,setNewClient]=useState({...EMPTY_CLIENT});
 
   useEffect(()=>{if(appMode==="trainer"){loadRequests().then(setRequests);loadClients().then(setClients);}},[appMode]);
+
+  // Handle email opt-in/opt-out link clicks
+  useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const pref = params.get("alertPref");
+    const code = params.get("code");
+    if(pref && code){
+      (async()=>{
+        const allClients = await loadClients();
+        const idx = allClients.findIndex(c=>c.clientCode&&c.clientCode.toUpperCase()===code.toUpperCase());
+        if(idx !== -1){
+          allClients[idx] = {...allClients[idx], wantsCancelAlerts: pref === "yes"};
+          await saveClients(allClients);
+        }
+        setAlertPrefResult(idx !== -1 ? (pref === "yes" ? "yes" : "no") : "notfound");
+        // Clean URL so refresh doesn't re-trigger
+        window.history.replaceState({}, "", window.location.pathname);
+      })();
+    }
+  },[]);
 
   function handlePinDigit(d){
     if(pin.length>=6)return;
@@ -431,7 +452,7 @@ export default function TheGreek(){
   }
 
   async function notifyWaitlist(cancelledReq){
-    const active = clients.filter(c=>c.status==="active"&&c.email&&c.email!==cancelledReq.email);
+    const active = clients.filter(c=>c.status==="active"&&c.email&&c.email!==cancelledReq.email&&c.wantsCancelAlerts===true);
     const appUrl = window.location.href;
     for(const c of active){
       await sendEmail(c.email, c.name, {
@@ -533,13 +554,15 @@ export default function TheGreek(){
     await saveClients(updated);setClients(updated);
     // Send welcome email if email and code are provided
     if(c.email&&c.clientCode){
-      const appUrl = window.location.href;
+      const baseUrl = window.location.origin + window.location.pathname;
+      const yesLink = `${baseUrl}?alertPref=yes&code=${encodeURIComponent(c.clientCode)}`;
+      const noLink = `${baseUrl}?alertPref=no&code=${encodeURIComponent(c.clientCode)}`;
       const result = await sendEmail(c.email, c.name, {
         subject: "Welcome to The Greek Personal Training 🏋️",
-        message: `Welcome! You have been added as a client at The Greek Personal Training.\n\nYour personal client code is: ${c.clientCode}\n\nUse this code to manage your bookings — view upcoming sessions, book new times, and cancel if needed.\n\nTo get started, visit the booking page and tap "Manage My Booking" then enter your code.`,
+        message: `Welcome! You have been added as a client at The Greek Personal Training.\n\nYour personal client code is: ${c.clientCode}\n\nUse this code to manage your bookings — view upcoming sessions, book new times, and cancel if needed.\n\nTo get started, visit the booking page and tap "Manage My Booking" then enter your code.\n\nOne quick question: would you like to be notified by email whenever a training slot opens up due to a cancellation, so you can grab it first?\n\nYes, notify me: ${yesLink}\nNo, don't notify me: ${noLink}`,
         session_date: "",
         session_time: "",
-        cancel_link: `Booking page: ${appUrl}`,
+        cancel_link: `Booking page: ${baseUrl}`,
       });
       if(!result.success){
         alert(`Client saved, but welcome email failed to send:\n${result.error}`);
@@ -565,6 +588,30 @@ export default function TheGreek(){
 
   const slots=selectedDate?generateSlots(selectedDate):[];
   const pendingCount=requests.filter(r=>r.status==="pending").length;
+
+  if(alertPrefResult){
+    return(
+      <div style={{minHeight:"100vh",background:"#080808",fontFamily:"'Raleway',sans-serif",color:"#f0ead6",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+        <style>{CSS}</style>
+        <div className="fade" style={{textAlign:"center",maxWidth:400}}>
+          <div style={{fontSize:48,marginBottom:16}}>{alertPrefResult==="notfound"?"⚠️":"✓"}</div>
+          <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:"#c9a84c",letterSpacing:3,marginBottom:12}}>
+            {alertPrefResult==="notfound"?"CODE NOT FOUND":"PREFERENCE SAVED"}
+          </div>
+          <div style={{color:"#555",lineHeight:1.9,fontSize:13,marginBottom:32}}>
+            {alertPrefResult==="notfound"
+              ? "We couldn't match your client code. Please contact your trainer."
+              : alertPrefResult==="yes"
+                ? "You'll be notified by email whenever a training slot opens up due to a cancellation."
+                : "You won't receive cancellation alert emails. You can still book sessions normally anytime."}
+          </div>
+          <button className="btn-gold" onClick={()=>{setAlertPrefResult(null);}} style={{padding:"14px 32px",fontSize:11,borderRadius:2}}>
+            CONTINUE TO BOOKING →
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return(
     <div style={{minHeight:"100vh",background:"#080808",fontFamily:"'Raleway',sans-serif",color:"#f0ead6"}}>
