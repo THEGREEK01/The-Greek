@@ -409,7 +409,7 @@ export default function TheGreek(){
 
   async function sendEmail(toEmail, toName, templateParams){
     try{
-      await fetch("https://api.emailjs.com/api/v1.0/email/send",{
+      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           service_id:EMAILJS_SERVICE_ID,
@@ -418,7 +418,16 @@ export default function TheGreek(){
           template_params:{to_email:toEmail,to_name:toName,...templateParams}
         })
       });
-    }catch{}
+      if(!res.ok){
+        const errText = await res.text();
+        console.error("EmailJS error:", res.status, errText);
+        return { success:false, error: `${res.status}: ${errText}` };
+      }
+      return { success:true };
+    }catch(err){
+      console.error("EmailJS fetch failed:", err);
+      return { success:false, error: err.message };
+    }
   }
 
   async function notifyWaitlist(cancelledReq){
@@ -525,13 +534,18 @@ export default function TheGreek(){
     // Send welcome email if email and code are provided
     if(c.email&&c.clientCode){
       const appUrl = window.location.href;
-      await sendEmail(c.email, c.name, {
+      const result = await sendEmail(c.email, c.name, {
         subject: "Welcome to The Greek Personal Training 🏋️",
         message: `Welcome! You have been added as a client at The Greek Personal Training.\n\nYour personal client code is: ${c.clientCode}\n\nUse this code to manage your bookings — view upcoming sessions, book new times, and cancel if needed.\n\nTo get started, visit the booking page and tap "Manage My Booking" then enter your code.`,
         session_date: "",
         session_time: "",
         cancel_link: `Booking page: ${appUrl}`,
       });
+      if(!result.success){
+        alert(`Client saved, but welcome email failed to send:\n${result.error}`);
+      }
+    } else {
+      alert("Client saved. No welcome email sent — fill in both Email and Client Code to trigger it.");
     }
     setNewClient({...EMPTY_CLIENT});setAddingClient(false);
   }
