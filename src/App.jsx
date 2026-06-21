@@ -307,10 +307,46 @@ function generateSlots(date){
   return slots;
 }
 
-async function loadRequests(){try{const r=await window.storage.get("booking-requests");return r?JSON.parse(r.value):[];}catch{return[];}}
-async function saveRequests(reqs){try{await window.storage.set("booking-requests",JSON.stringify(reqs));}catch{}}
-async function loadClients(){try{const r=await window.storage.get("clients");return r?JSON.parse(r.value):[];}catch{return[];}}
-async function saveClients(c){try{await window.storage.set("clients",JSON.stringify(c));}catch{}}
+const SUPABASE_URL = "https://gwookwghbsetqhfyfwen.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4XAB0Xhe6QVmOJVSn7xgwg_t_A6P8zE";
+
+async function supaGet(table){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+    });
+    if(!res.ok) return [];
+    const rows = await res.json();
+    return rows.map(r => r.data);
+  } catch { return []; }
+}
+
+async function supaSetAll(table, items){
+  try{
+    // Delete all existing rows then insert fresh (simple full-sync approach)
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=neq.__never__`, {
+      method: "DELETE",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+    });
+    if(items.length === 0) return;
+    const rows = items.map(item => ({ id: String(item.id), data: item }));
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(rows)
+    });
+  } catch {}
+}
+
+async function loadRequests(){ return await supaGet("booking_requests"); }
+async function saveRequests(reqs){ await supaSetAll("booking_requests", reqs); }
+async function loadClients(){ return await supaGet("clients"); }
+async function saveClients(c){ await supaSetAll("clients", c); }
 
 const EMPTY_CLIENT = {name:"",phone:"",email:"",birthday:"",address:"",emergencyContact:"",age:"",weight:"",height:"",bodyFat:"",familyInfo:"",medicalConditions:"",injuries:"",medications:"",allergies:"",fitnessGoal:"",experienceLevel:"",trainingProgram:"",sessionsPerWeek:"",preferredTime:"",notes:"",trainingHistory:[],totalSessions:0,status:"active",clientCode:"",wantsCancelAlerts:null};
 
