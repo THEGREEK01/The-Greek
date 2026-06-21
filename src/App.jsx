@@ -539,6 +539,11 @@ export default function TheGreek(){
     await saveClients(updated);setClients(updated);setSelectedClient(editingClient);setEditingClient(null);
   }
 
+  async function deleteClient(clientId){
+    const updated=clients.filter(c=>c.id!==clientId);
+    await saveClients(updated);setClients(updated);setSelectedClient(null);
+  }
+
 
 
 
@@ -584,7 +589,7 @@ export default function TheGreek(){
     setActionLoading(null);
   }
   async function saveNewClient(){
-    if(!newClient.name.trim()&&!newClient.phone.trim())return;
+    if(!newClient.name.trim())return;
     const c={...newClient,id:Date.now().toString(),totalSessions:0,trainingHistory:[],firstSession:"",lastSession:"",status:"active"};
     const updated=[...clients,c];
     await saveClients(updated);setClients(updated);
@@ -815,12 +820,17 @@ export default function TheGreek(){
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
                       <button className="btn-ghost" onClick={()=>prev?setSelectedClient(prev):setSelectedClient(null)}
                         style={{padding:"6px 14px",fontSize:10,borderRadius:2}}>
-                        {prev?`← ${prev.name.split(" ")[0]}`:"← LIST"}
+                        {prev?`← ${(prev.name||"Unnamed").split(" ")[0]}`:"← LIST"}
                       </button>
                       <div style={{fontSize:9,color:"#555",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>{idx+1} / {sorted.length}</div>
                       <div style={{display:"flex",gap:8,alignItems:"center"}}>
                         <button className="btn-gold" onClick={()=>setEditingClient({...selectedClient})} style={{padding:"8px 14px",fontSize:10,borderRadius:2,letterSpacing:1}}>✎ EDIT</button>
-                        {next&&<button className="btn-ghost" onClick={()=>setSelectedClient(next)} style={{padding:"6px 14px",fontSize:10,borderRadius:2}}>{next.name.split(" ")[0]} →</button>}
+                        <button className="btn-red" onClick={()=>{
+                          if(window.confirm(`Delete ${selectedClient.name||"this client"}? This cannot be undone.`)){
+                            deleteClient(selectedClient.id);
+                          }
+                        }} style={{padding:"8px 14px",fontSize:10,borderRadius:2,letterSpacing:1}}>🗑 DELETE</button>
+                        {next&&<button className="btn-ghost" onClick={()=>setSelectedClient(next)} style={{padding:"6px 14px",fontSize:10,borderRadius:2}}>{(next.name||"Unnamed").split(" ")[0]} →</button>}
                       </div>
                     </div>
                   );
