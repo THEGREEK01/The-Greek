@@ -529,12 +529,13 @@ function countSessions(history, from, to){
     return d>=from && d<=to;
   }).length;
 }
-function getClientCalendarSessions(clientName, daysAhead=120){
+function getClientCalendarSessions(clientName, daysAhead=120, eventsOverride=null){
   if(!clientName) return [];
   const fullName = clientName.trim().toLowerCase();
   const now = new Date(); now.setHours(0,0,0,0);
   const end = new Date(now); end.setDate(now.getDate()+daysAhead);
-  return BOOKED_EVENTS
+  const eventsToCheck = eventsOverride || BOOKED_EVENTS;
+  return eventsToCheck
     .filter(ev => {
       if(!ev.title) return false;
       const title = ev.title.trim().toLowerCase();
@@ -571,16 +572,17 @@ function getHours(d){return isWeekend(d)?WORKING_HOURS.weekend:WORKING_HOURS.wee
 function formatTime(d){const h=d.getHours();return `${h<10?"0"+h:h}:00`;}
 function formatDate(d){return `${DAYS_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;}
 
-function generateSlots(date, trainerId="johan"){
+function generateSlots(date, trainerId="johan", eventsOverride=null){
   const trainer = TRAINERS.find(t=>t.id===trainerId) || TRAINERS[0];
   const hours = getTrainerSlotsForDay(trainer, date);
+  const eventsToCheck = eventsOverride || BOOKED_EVENTS;
   const slots = [];
   for(const h of hours){
     const s=new Date(date);s.setHours(h,0,0,0);
     const e=new Date(date);e.setHours(h+1,0,0,0);
     // Only Johan's slots check against the real Google Calendar sync
     const booked = trainerId==="johan"
-      ? BOOKED_EVENTS.some(b=>new Date(b.start)<e&&new Date(b.end)>s)
+      ? eventsToCheck.some(b=>new Date(b.start)<e&&new Date(b.end)>s)
       : false;
     slots.push({time:s,endTime:e,key:`${trainerId}-${s.toISOString()}`,booked,trainerId});
   }
@@ -709,7 +711,9 @@ export default function TheGreek(){
   const [portalClient,setPortalClient]=useState(null);
   const [portalError,setPortalError]=useState(false);
   const [clientSearch,setClientSearch]=useState("");
-  const [upcomingRange,setUpcomingRange]=useState("week"); // week | month
+  const [upcomingRange,setUpcomingRange]=useState("week");
+  const [liveEvents,setLiveEvents]=useState(null); // null = not loaded yet, array = loaded
+  const [calendarConnected,setCalendarConnected]=useState(null); // week | month
   const [alertPrefResult,setAlertPrefResult]=useState(null);
   const [requests,setRequests]=useState([]);
   const [clients,setClients]=useState([]);
@@ -729,6 +733,27 @@ export default function TheGreek(){
     if(activeTrainers.length>1 && cView==="calendar" && !selectedDate){
       setCView("trainerSelect");
     }
+  },[]);
+
+  // Fetch live Google Calendar events on load (falls back to static BOOKED_EVENTS if unavailable)
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const res = await fetch("/api/calendar-events");
+        const data = await res.json();
+        if(data.error === "not_connected"){
+          setCalendarConnected(false);
+          setLiveEvents(BOOKED_EVENTS); // fallback to static data
+        } else if(data.events){
+          setCalendarConnected(true);
+          setLiveEvents(data.events);
+        } else {
+          setLiveEvents(BOOKED_EVENTS);
+        }
+      }catch{
+        setLiveEvents(BOOKED_EVENTS); // fallback on any network error
+      }
+    })();
   },[]);
 
   // Handle email opt-in/opt-out link clicks
@@ -963,13 +988,13 @@ export default function TheGreek(){
   }
 
   function getDaySlotStats(date, trainerId){
-    const daySlots = generateSlots(date, trainerId);
+    const daySlots = generateSlots(date, trainerId, liveEvents);
     const total = daySlots.length;
     const booked = daySlots.filter(s=>s.booked).length;
     return { total, booked, available: total-booked };
   }
 
-  const slots=selectedDate?generateSlots(selectedDate, selectedTrainer||"johan"):[];
+  const slots=selectedDate?generateSlots(selectedDate, selectedTrainer||"johan", liveEvents):[];
   const pendingCount=requests.filter(r=>r.status==="pending").length;
 
   if(alertPrefResult){
@@ -1052,6 +1077,21 @@ export default function TheGreek(){
 
             {tView==="upcoming"&&(
               <div className="fade">
+                <div style={{
+                  display:"flex",justifyContent:"space-between",alignItems:"center",
+                  padding:"10px 14px",marginBottom:14,borderRadius:2,
+                  background: calendarConnected===false ? "rgba(192,57,43,0.1)" : calendarConnected===true ? "rgba(46,204,113,0.08)" : "#141414",
+                  border: `1px solid ${calendarConnected===false ? "#c0392b40" : calendarConnected===true ? "#2ecc7140" : "#222"}`,
+                }}>
+                  <div style={{fontSize:10,letterSpacing:1,color: calendarConnected===false?"#e57373":calendarConnected===true?"#81c784":"#555"}}>
+                    {calendarConnected===null ? "Checking calendar connection..." :
+                     calendarConnected===false ? "Google Calendar not connected — showing manual data" :
+                     "Google Calendar connected — live sync active"}
+                  </div>
+                  {calendarConnected===false && (
+                    <a href="/api/auth-start" style={{fontSize:9,color:"#c9a84c",letterSpacing:1,textDecoration:"underline"}}>CONNECT NOW</a>
+                  )}
+                </div>
                 <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #222",borderRadius:2,overflow:"hidden"}}>
                   {[["week","THIS WEEK"],["month","THIS MONTH"]].map(([v,label])=>(
                     <button key={v} onClick={()=>setUpcomingRange(v)}
@@ -1061,7 +1101,7 @@ export default function TheGreek(){
                   ))}
                 </div>
                 {(()=>{
-                  const sessions = getUpcomingSessions(requests, BOOKED_EVENTS, upcomingRange==="week"?7:30);
+                  const sessions = getUpcomingSessions(requests, liveEvents||BOOKED_EVENTS, upcomingRange==="week"?7:30);
                   if(sessions.length===0) return <div style={{textAlign:"center",padding:"50px 0",color:"#555",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO UPCOMING SESSIONS</div>;
                   let lastDate = null;
                   return sessions.map((s,i)=>{
@@ -1496,7 +1536,7 @@ export default function TheGreek(){
                 {(()=>{
                   const myReqs = requests.filter(r=>r.phone===portalClient.phone&&r.status==="approved")
                     .map(r=>({dateISO:r.dateISO,date:r.date,time:r.time,timeEnd:r.timeEnd,source:"request",id:r.id}));
-                  const calSessions = getClientCalendarSessions(portalClient.name)
+                  const calSessions = getClientCalendarSessions(portalClient.name, 120, liveEvents)
                     .map((s,i)=>({...s,id:`cal-${i}`}));
                   // Merge, dedupe by date+time (in case a calendar event was also booked through the app)
                   const seen = new Set();
