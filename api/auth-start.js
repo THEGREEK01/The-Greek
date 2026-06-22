@@ -1,11 +1,16 @@
 export default function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const allEnvKeys = Object.keys(process.env).filter(k => k.startsWith('GOOGLE') || k.startsWith('SUPABASE'));
-  
-  res.status(200).json({
-    clientId: clientId || "MISSING",
-    clientIdLength: clientId ? clientId.length : 0,
-    foundEnvKeys: allEnvKeys,
-    totalEnvVarsCount: Object.keys(process.env).length,
-  });
+  const redirectUri = `https://${req.headers.host}/api/auth-callback`;
+  const scope = encodeURIComponent("https://www.googleapis.com/auth/calendar.readonly");
+
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${clientId}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&response_type=code` +
+    `&scope=${scope}` +
+    `&access_type=offline` +
+    `&prompt=consent`;
+
+  // DEBUG: show the URL instead of redirecting
+  res.status(200).json({ generatedUrl: url, clientId, redirectUri });
 }
