@@ -652,6 +652,35 @@ export default function TheGreek(){
     await notifyWaitlist(req);
     setActionLoading(null);
   }
+  async function testEmail(){
+    const testAddr = prompt("Send test email to:", "johanoulis@gmail.com");
+    if(!testAddr) return;
+    const payload = {
+      service_id:EMAILJS_SERVICE_ID,
+      template_id:EMAILJS_TEMPLATE_ID,
+      user_id:EMAILJS_PUBLIC_KEY,
+      template_params:{
+        to_email: testAddr,
+        to_name: "Test User",
+        subject: "Test Email from The Greek App",
+        message: "This is a plain test message with no special characters.",
+        session_date: "",
+        session_time: "",
+        cancel_link: "",
+      }
+    };
+    try{
+      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+      });
+      const text = await res.text();
+      alert(`Status: ${res.status}\nResponse: ${text}\n\nPayload sent:\n${JSON.stringify(payload, null, 2).slice(0,500)}`);
+    }catch(err){
+      alert(`Network error: ${err.message}`);
+    }
+  }
+
   async function saveNewClient(){
     if(!newClient.name.trim())return;
     const c={...newClient,id:Date.now().toString(),totalSessions:0,trainingHistory:[],firstSession:"",lastSession:"",status:"active"};
@@ -663,8 +692,8 @@ export default function TheGreek(){
       const yesLink = `${baseUrl}?alertPref=yes&code=${encodeURIComponent(c.clientCode)}`;
       const noLink = `${baseUrl}?alertPref=no&code=${encodeURIComponent(c.clientCode)}`;
       const result = await sendEmail(c.email, c.name, {
-        subject: "Welcome to The Greek Personal Training 🏋️",
-        message: `Welcome! You have been added as a client at The Greek Personal Training.\n\nYour personal client code is: ${c.clientCode}\n\nUse this code to manage your bookings — view upcoming sessions, book new times, and cancel if needed.\n\nTo get started, visit the booking page and tap "Manage My Booking" then enter your code.\n\nOne quick question: would you like to be notified by email whenever a training slot opens up due to a cancellation, so you can grab it first?\n\nYes, notify me: ${yesLink}\nNo, don't notify me: ${noLink}`,
+        subject: "Welcome to The Greek Personal Training",
+        message: `Welcome! You have been added as a client at The Greek Personal Training.\n\nYour personal client code is: ${c.clientCode}\n\nUse this code to manage your bookings - view upcoming sessions, book new times, and cancel if needed.\n\nTo get started, visit the booking page and tap "Manage My Booking" then enter your code.\n\nOne quick question: would you like to be notified by email whenever a training slot opens up due to a cancellation, so you can grab it first?\n\nYes, notify me: ${yesLink}\nNo, don't notify me: ${noLink}`,
         session_date: "",
         session_time: "",
         cancel_link: `Booking page: ${baseUrl}`,
@@ -829,6 +858,9 @@ export default function TheGreek(){
 
             {tView==="requests"&&(
               <div>
+                <button className="btn-ghost" onClick={testEmail} style={{width:"100%",padding:"10px",fontSize:9,borderRadius:2,letterSpacing:2,marginBottom:14}}>
+                  🔧 SEND TEST EMAIL (DEBUG)
+                </button>
                 {requests.filter(r=>r.status==="pending").length===0
                   ?<div style={{textAlign:"center",padding:"50px 0",color:"#555",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO PENDING REQUESTS</div>
                   :requests.filter(r=>r.status==="pending").map(req=>{
