@@ -10,7 +10,8 @@ export default function handler(req, res) {
     `&response_type=code` +
     `&scope=${scope}` +
     `&access_type=offline` +
-    `&prompt=consent`;
+    `&prompt=${encodeURIComponent("consent select_account")}` +
+    `&include_granted_scopes=false`;
 
   res.redirect(302, url);
 }
