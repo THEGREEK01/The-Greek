@@ -556,7 +556,7 @@ export default function TheGreek(){
     const appUrl = window.location.href;
     for(const c of active){
       await sendEmail(c.email, c.name, {
-        subject: "🏋️ Session Slot Just Opened — The Greek",
+        subject: "Session Slot Just Opened - The Greek",
         message: `A training slot has just become available! Be the first to grab it.`,
         session_date: cancelledReq.date,
         session_time: `${cancelledReq.time} – ${cancelledReq.timeEnd}`,
@@ -580,7 +580,7 @@ export default function TheGreek(){
     await saveRequests(updated);setRequests(updated);
     const req=updated.find(r=>r.id===id);
     if(req?.email) await sendEmail(req.email, req.name, {
-      subject: decision==="approved" ? "✓ Session Confirmed — The Greek" : "Session Request Update — The Greek",
+      subject: decision==="approved" ? "Session Confirmed - The Greek" : "Session Request Update - The Greek",
       message: decision==="approved"
         ? `Your training session has been confirmed. See you there!`
         : `Unfortunately this slot is no longer available. Please request another time.`,
