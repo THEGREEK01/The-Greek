@@ -7,161 +7,119 @@ const EMAILJS_TEMPLATE_ID = "template_iz4l63l";
 const EMAILJS_PUBLIC_KEY = "sqaNe63TyoTii8GHk";
 
 const WORKING_HOURS = { weekday:{start:6,end:21}, weekend:{start:7,end:14} };
+
+// ─── TRAINERS ─────────────────────────────────────────────────────────────
+const TRAINERS = [
+  {
+    id: "johan",
+    name: "Johan",
+    color: "#c9a84c", // gold
+    startDate: null, // always active
+    getHours: (date) => {
+      const day = date.getDay();
+      const isWeekend = day === 0 || day === 6;
+      return isWeekend ? { start: 7, end: 14 } : { start: 6, end: 21 };
+    },
+  },
+  {
+    id: "dina",
+    name: "Dina",
+    color: "#7ec4c9", // teal accent to distinguish from gold
+    startDate: "2026-09-01", // only active from September 1st
+    getHours: (date) => {
+      const day = date.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+      if (day === 2 || day === 4) { // Tuesday or Thursday
+        return [{ start: 6, end: 8 }, { start: 15, end: 18 }];
+      }
+      return null; // not working this day
+    },
+  },
+];
+
+function trainerIsActive(trainer, date) {
+  if (!trainer.startDate) return true;
+  return date >= new Date(trainer.startDate);
+}
+
+function getTrainerSlotsForDay(trainer, date) {
+  if (!trainerIsActive(trainer, date)) return [];
+  const hours = trainer.getHours(date);
+  if (!hours) return [];
+  const ranges = Array.isArray(hours) ? hours : [hours];
+  const slots = [];
+  for (const range of ranges) {
+    for (let h = range.start; h < range.end; h++) {
+      slots.push(h);
+    }
+  }
+  return slots;
+}
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const DAYS_FULL = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const BOOKED_EVENTS = [
-  { start: "2026-06-08T06:00:00+02:00", end: "2026-06-08T07:00:00+02:00" },
-  { start: "2026-06-08T07:00:00+02:00", end: "2026-06-08T08:00:00+02:00" },
-  { start: "2026-06-08T08:00:00+02:00", end: "2026-06-08T08:30:00+02:00" },
-  { start: "2026-06-08T09:30:00+02:00", end: "2026-06-08T10:30:00+02:00" },
-  { start: "2026-06-08T10:30:00+02:00", end: "2026-06-08T11:30:00+02:00" },
-  { start: "2026-06-08T11:30:00+02:00", end: "2026-06-08T12:30:00+02:00" },
-  { start: "2026-06-08T13:00:00+02:00", end: "2026-06-08T14:00:00+02:00" },
-  { start: "2026-06-08T15:00:00+02:00", end: "2026-06-08T16:00:00+02:00" },
-  { start: "2026-06-08T15:15:00+02:00", end: "2026-06-08T16:15:00+02:00" },
-  { start: "2026-06-08T16:00:00+02:00", end: "2026-06-08T17:00:00+02:00" },
-  { start: "2026-06-08T17:00:00+02:00", end: "2026-06-08T18:00:00+02:00" },
-  { start: "2026-06-08T18:00:00+02:00", end: "2026-06-08T19:00:00+02:00" },
-  { start: "2026-06-09T06:00:00+02:00", end: "2026-06-09T07:00:00+02:00" },
-  { start: "2026-06-09T07:00:00+02:00", end: "2026-06-09T08:00:00+02:00" },
-  { start: "2026-06-09T08:30:00+02:00", end: "2026-06-09T09:30:00+02:00" },
-  { start: "2026-06-09T09:30:00+02:00", end: "2026-06-09T10:30:00+02:00" },
-  { start: "2026-06-09T13:00:00+02:00", end: "2026-06-09T14:00:00+02:00" },
-  { start: "2026-06-09T14:00:00+02:00", end: "2026-06-09T15:00:00+02:00" },
-  { start: "2026-06-09T15:00:00+02:00", end: "2026-06-09T16:00:00+02:00" },
-  { start: "2026-06-09T18:00:00+02:00", end: "2026-06-09T19:00:00+02:00" },
-  { start: "2026-06-10T06:00:00+02:00", end: "2026-06-10T07:00:00+02:00" },
-  { start: "2026-06-10T07:00:00+02:00", end: "2026-06-10T08:00:00+02:00" },
-  { start: "2026-06-10T07:30:00+02:00", end: "2026-06-10T08:30:00+02:00" },
-  { start: "2026-06-10T09:30:00+02:00", end: "2026-06-10T10:30:00+02:00" },
-  { start: "2026-06-10T10:30:00+02:00", end: "2026-06-10T11:30:00+02:00" },
-  { start: "2026-06-10T13:00:00+02:00", end: "2026-06-10T14:00:00+02:00" },
-  { start: "2026-06-10T14:00:00+02:00", end: "2026-06-10T15:00:00+02:00" },
-  { start: "2026-06-10T15:00:00+02:00", end: "2026-06-10T16:00:00+02:00" },
-  { start: "2026-06-10T16:00:00+02:00", end: "2026-06-10T17:00:00+02:00" },
-  { start: "2026-06-10T18:00:00+02:00", end: "2026-06-10T19:00:00+02:00" },
-  { start: "2026-06-11T07:00:00+02:00", end: "2026-06-11T08:00:00+02:00" },
-  { start: "2026-06-11T08:30:00+02:00", end: "2026-06-11T09:30:00+02:00" },
-  { start: "2026-06-11T09:30:00+02:00", end: "2026-06-11T10:30:00+02:00" },
-  { start: "2026-06-11T12:00:00+02:00", end: "2026-06-11T12:30:00+02:00" },
-  { start: "2026-06-11T13:00:00+02:00", end: "2026-06-11T14:00:00+02:00" },
-  { start: "2026-06-11T14:00:00+02:00", end: "2026-06-11T15:00:00+02:00" },
-  { start: "2026-06-11T15:00:00+02:00", end: "2026-06-11T16:00:00+02:00" },
-  { start: "2026-06-11T16:00:00+02:00", end: "2026-06-11T17:00:00+02:00" },
-  { start: "2026-06-11T17:00:00+02:00", end: "2026-06-11T18:00:00+02:00" },
-  { start: "2026-06-11T18:00:00+02:00", end: "2026-06-11T19:00:00+02:00" },
-  { start: "2026-06-12T06:00:00+02:00", end: "2026-06-12T07:00:00+02:00" },
-  { start: "2026-06-12T07:00:00+02:00", end: "2026-06-12T08:00:00+02:00" },
-  { start: "2026-06-12T08:00:00+02:00", end: "2026-06-12T09:00:00+02:00" },
-  { start: "2026-06-12T09:00:00+02:00", end: "2026-06-12T10:00:00+02:00" },
-  { start: "2026-06-12T10:00:00+02:00", end: "2026-06-12T11:00:00+02:00" },
-  { start: "2026-06-12T15:00:00+02:00", end: "2026-06-12T16:00:00+02:00" },
-  { start: "2026-06-12T16:00:00+02:00", end: "2026-06-12T17:00:00+02:00" },
-  { start: "2026-06-12T17:00:00+02:00", end: "2026-06-12T18:00:00+02:00" },
-  { start: "2026-06-13T10:00:00+02:00", end: "2026-06-13T11:00:00+02:00" },
-  { start: "2026-06-15T06:00:00+02:00", end: "2026-06-15T07:00:00+02:00" },
-  { start: "2026-06-15T07:00:00+02:00", end: "2026-06-15T08:00:00+02:00" },
-  { start: "2026-06-15T09:30:00+02:00", end: "2026-06-15T10:30:00+02:00" },
-  { start: "2026-06-15T10:30:00+02:00", end: "2026-06-15T11:30:00+02:00" },
-  { start: "2026-06-15T11:30:00+02:00", end: "2026-06-15T12:30:00+02:00" },
-  { start: "2026-06-15T14:00:00+02:00", end: "2026-06-15T15:00:00+02:00" },
-  { start: "2026-06-15T15:00:00+02:00", end: "2026-06-15T16:00:00+02:00" },
-  { start: "2026-06-15T16:00:00+02:00", end: "2026-06-15T17:00:00+02:00" },
-  { start: "2026-06-15T17:00:00+02:00", end: "2026-06-15T18:00:00+02:00" },
-  { start: "2026-06-15T18:00:00+02:00", end: "2026-06-15T19:00:00+02:00" },
-  { start: "2026-06-15T19:00:00+02:00", end: "2026-06-15T20:00:00+02:00" },
-  { start: "2026-06-16T06:00:00+02:00", end: "2026-06-16T07:00:00+02:00" },
-  { start: "2026-06-16T07:00:00+02:00", end: "2026-06-16T08:00:00+02:00" },
-  { start: "2026-06-16T08:30:00+02:00", end: "2026-06-16T09:30:00+02:00" },
-  { start: "2026-06-16T09:30:00+02:00", end: "2026-06-16T10:30:00+02:00" },
-  { start: "2026-06-16T10:30:00+02:00", end: "2026-06-16T11:30:00+02:00" },
-  { start: "2026-06-16T12:00:00+02:00", end: "2026-06-16T13:00:00+02:00" },
-  { start: "2026-06-16T15:00:00+02:00", end: "2026-06-16T16:00:00+02:00" },
-  { start: "2026-06-16T16:00:00+02:00", end: "2026-06-16T17:00:00+02:00" },
-  { start: "2026-06-16T17:00:00+02:00", end: "2026-06-16T18:00:00+02:00" },
-  { start: "2026-06-16T18:00:00+02:00", end: "2026-06-16T19:00:00+02:00" },
-  { start: "2026-06-17T06:00:00+02:00", end: "2026-06-17T07:00:00+02:00" },
-  { start: "2026-06-17T07:30:00+02:00", end: "2026-06-17T08:30:00+02:00" },
-  { start: "2026-06-17T08:00:00+02:00", end: "2026-06-17T09:00:00+02:00" },
-  { start: "2026-06-17T09:30:00+02:00", end: "2026-06-17T10:30:00+02:00" },
-  { start: "2026-06-17T10:30:00+02:00", end: "2026-06-17T11:30:00+02:00" },
-  { start: "2026-06-17T14:00:00+02:00", end: "2026-06-17T15:00:00+02:00" },
-  { start: "2026-06-17T15:00:00+02:00", end: "2026-06-17T16:00:00+02:00" },
-  { start: "2026-06-17T16:00:00+02:00", end: "2026-06-17T17:00:00+02:00" },
-  { start: "2026-06-18T06:00:00+02:00", end: "2026-06-18T07:00:00+02:00" },
-  { start: "2026-06-18T07:00:00+02:00", end: "2026-06-18T08:00:00+02:00" },
-  { start: "2026-06-18T08:30:00+02:00", end: "2026-06-18T09:30:00+02:00" },
-  { start: "2026-06-18T09:30:00+02:00", end: "2026-06-18T10:30:00+02:00" },
-  { start: "2026-06-18T10:30:00+02:00", end: "2026-06-18T11:30:00+02:00" },
-  { start: "2026-06-18T12:00:00+02:00", end: "2026-06-18T13:00:00+02:00" },
-  { start: "2026-06-18T13:00:00+02:00", end: "2026-06-18T14:00:00+02:00" },
-  { start: "2026-06-18T14:00:00+02:00", end: "2026-06-18T15:00:00+02:00" },
-  { start: "2026-06-18T15:00:00+02:00", end: "2026-06-18T16:00:00+02:00" },
-  { start: "2026-06-18T16:00:00+02:00", end: "2026-06-18T17:00:00+02:00" },
-  { start: "2026-06-18T17:00:00+02:00", end: "2026-06-18T18:00:00+02:00" },
-  { start: "2026-06-18T18:00:00+02:00", end: "2026-06-18T19:00:00+02:00" },
-  { start: "2026-06-19T06:00:00+02:00", end: "2026-06-19T07:00:00+02:00" },
-  { start: "2026-06-19T07:00:00+02:00", end: "2026-06-19T08:00:00+02:00" },
-  { start: "2026-06-19T08:00:00+02:00", end: "2026-06-19T09:00:00+02:00" },
-  { start: "2026-06-19T09:00:00+02:00", end: "2026-06-19T10:00:00+02:00" },
-  { start: "2026-06-19T10:00:00+02:00", end: "2026-06-19T11:00:00+02:00" },
-  { start: "2026-06-19T11:00:00+02:00", end: "2026-06-19T12:00:00+02:00" },
-  { start: "2026-06-19T15:00:00+02:00", end: "2026-06-19T16:00:00+02:00" },
-  { start: "2026-06-20T09:00:00+02:00", end: "2026-06-20T10:00:00+02:00" },
-  { start: "2026-06-20T10:00:00+02:00", end: "2026-06-20T11:00:00+02:00" },
   { start: "2026-06-21T13:00:00+02:00", end: "2026-06-21T14:00:00+02:00" },
   { start: "2026-06-22T06:00:00+02:00", end: "2026-06-22T07:00:00+02:00" },
   { start: "2026-06-22T07:00:00+02:00", end: "2026-06-22T08:00:00+02:00" },
+  { start: "2026-06-22T08:00:00+02:00", end: "2026-06-22T09:00:00+02:00" },
   { start: "2026-06-22T09:30:00+02:00", end: "2026-06-22T10:30:00+02:00" },
   { start: "2026-06-22T10:30:00+02:00", end: "2026-06-22T11:30:00+02:00" },
+  { start: "2026-06-22T13:00:00+02:00", end: "2026-06-22T13:30:00+02:00" },
   { start: "2026-06-22T15:00:00+02:00", end: "2026-06-22T16:00:00+02:00" },
   { start: "2026-06-22T17:00:00+02:00", end: "2026-06-22T18:00:00+02:00" },
-  { start: "2026-06-22T18:00:00+02:00", end: "2026-06-22T19:00:00+02:00" },
   { start: "2026-06-23T06:00:00+02:00", end: "2026-06-23T07:00:00+02:00" },
   { start: "2026-06-23T07:00:00+02:00", end: "2026-06-23T08:00:00+02:00" },
   { start: "2026-06-23T08:30:00+02:00", end: "2026-06-23T09:30:00+02:00" },
   { start: "2026-06-23T09:30:00+02:00", end: "2026-06-23T10:30:00+02:00" },
-  { start: "2026-06-23T18:00:00+02:00", end: "2026-06-23T19:00:00+02:00" },
+  { start: "2026-06-23T12:00:00+02:00", end: "2026-06-23T13:00:00+02:00" },
+  { start: "2026-06-23T13:00:00+02:00", end: "2026-06-23T14:00:00+02:00" },
+  { start: "2026-06-23T15:00:00+02:00", end: "2026-06-23T16:00:00+02:00" },
+  { start: "2026-06-23T16:00:00+02:00", end: "2026-06-23T17:00:00+02:00" },
   { start: "2026-06-24T06:00:00+02:00", end: "2026-06-24T07:00:00+02:00" },
-  { start: "2026-06-24T07:30:00+02:00", end: "2026-06-24T08:30:00+02:00" },
+  { start: "2026-06-24T08:30:00+02:00", end: "2026-06-24T09:30:00+02:00" },
   { start: "2026-06-24T09:30:00+02:00", end: "2026-06-24T10:30:00+02:00" },
+  { start: "2026-06-24T12:00:00+02:00", end: "2026-06-24T13:00:00+02:00" },
+  { start: "2026-06-24T14:00:00+02:00", end: "2026-06-24T15:00:00+02:00" },
+  { start: "2026-06-24T15:00:00+02:00", end: "2026-06-24T16:00:00+02:00" },
   { start: "2026-06-24T16:00:00+02:00", end: "2026-06-24T17:00:00+02:00" },
+  { start: "2026-06-24T18:30:00+02:00", end: "2026-06-24T19:30:00+02:00" },
   { start: "2026-06-25T06:00:00+02:00", end: "2026-06-25T07:00:00+02:00" },
   { start: "2026-06-25T07:00:00+02:00", end: "2026-06-25T08:00:00+02:00" },
-  { start: "2026-06-25T08:30:00+02:00", end: "2026-06-25T09:30:00+02:00" },
   { start: "2026-06-25T09:30:00+02:00", end: "2026-06-25T10:30:00+02:00" },
+  { start: "2026-06-25T12:00:00+02:00", end: "2026-06-25T13:00:00+02:00" },
   { start: "2026-06-25T14:00:00+02:00", end: "2026-06-25T15:00:00+02:00" },
   { start: "2026-06-25T15:00:00+02:00", end: "2026-06-25T16:00:00+02:00" },
+  { start: "2026-06-25T17:00:00+02:00", end: "2026-06-25T18:00:00+02:00" },
   { start: "2026-06-25T18:00:00+02:00", end: "2026-06-25T19:00:00+02:00" },
-  { start: "2026-06-26T06:00:00+02:00", end: "2026-06-26T07:00:00+02:00" },
+  { start: "2026-06-25T19:00:00+02:00", end: "2026-06-25T20:00:00+02:00" },
   { start: "2026-06-26T07:00:00+02:00", end: "2026-06-26T08:00:00+02:00" },
   { start: "2026-06-26T08:00:00+02:00", end: "2026-06-26T09:00:00+02:00" },
   { start: "2026-06-26T09:00:00+02:00", end: "2026-06-26T10:00:00+02:00" },
+  { start: "2026-06-26T14:00:00+02:00", end: "2026-06-26T15:00:00+02:00" },
   { start: "2026-06-26T15:00:00+02:00", end: "2026-06-26T16:00:00+02:00" },
+  { start: "2026-06-27T12:00:00+02:00", end: "2026-06-27T13:00:00+02:00" },
   { start: "2026-06-29T06:00:00+02:00", end: "2026-06-29T07:00:00+02:00" },
   { start: "2026-06-29T07:00:00+02:00", end: "2026-06-29T08:00:00+02:00" },
   { start: "2026-06-29T09:30:00+02:00", end: "2026-06-29T10:30:00+02:00" },
-  { start: "2026-06-29T10:30:00+02:00", end: "2026-06-29T11:30:00+02:00" },
+  { start: "2026-06-29T10:30:00+02:00", end: "2026-06-29T11:00:00+02:00" },
+  { start: "2026-06-29T14:00:00+02:00", end: "2026-06-29T15:00:00+02:00" },
   { start: "2026-06-29T15:00:00+02:00", end: "2026-06-29T16:00:00+02:00" },
+  { start: "2026-06-29T17:00:00+02:00", end: "2026-06-29T18:00:00+02:00" },
   { start: "2026-06-29T18:00:00+02:00", end: "2026-06-29T19:00:00+02:00" },
   { start: "2026-06-30T06:00:00+02:00", end: "2026-06-30T07:00:00+02:00" },
   { start: "2026-06-30T07:00:00+02:00", end: "2026-06-30T08:00:00+02:00" },
   { start: "2026-06-30T08:30:00+02:00", end: "2026-06-30T09:30:00+02:00" },
   { start: "2026-06-30T09:30:00+02:00", end: "2026-06-30T10:30:00+02:00" },
   { start: "2026-06-30T18:00:00+02:00", end: "2026-06-30T19:00:00+02:00" },
+  { start: "2026-06-30T19:00:00+02:00", end: "2026-06-30T20:00:00+02:00" },
   { start: "2026-07-01T06:00:00+02:00", end: "2026-07-01T07:00:00+02:00" },
-  { start: "2026-07-01T07:30:00+02:00", end: "2026-07-01T08:30:00+02:00" },
   { start: "2026-07-01T09:30:00+02:00", end: "2026-07-01T10:30:00+02:00" },
   { start: "2026-07-01T16:00:00+02:00", end: "2026-07-01T17:00:00+02:00" },
   { start: "2026-07-02T06:00:00+02:00", end: "2026-07-02T07:00:00+02:00" },
   { start: "2026-07-02T07:00:00+02:00", end: "2026-07-02T08:00:00+02:00" },
-  { start: "2026-07-02T08:30:00+02:00", end: "2026-07-02T09:30:00+02:00" },
-  { start: "2026-07-02T09:30:00+02:00", end: "2026-07-02T10:30:00+02:00" },
   { start: "2026-07-02T14:00:00+02:00", end: "2026-07-02T15:00:00+02:00" },
   { start: "2026-07-02T15:00:00+02:00", end: "2026-07-02T16:00:00+02:00" },
-  { start: "2026-07-02T18:00:00+02:00", end: "2026-07-02T19:00:00+02:00" },
   { start: "2026-07-03T06:00:00+02:00", end: "2026-07-03T07:00:00+02:00" },
   { start: "2026-07-03T07:00:00+02:00", end: "2026-07-03T08:00:00+02:00" },
   { start: "2026-07-03T08:00:00+02:00", end: "2026-07-03T09:00:00+02:00" },
@@ -175,16 +133,13 @@ const BOOKED_EVENTS = [
   { start: "2026-07-06T18:00:00+02:00", end: "2026-07-06T19:00:00+02:00" },
   { start: "2026-07-07T06:00:00+02:00", end: "2026-07-07T07:00:00+02:00" },
   { start: "2026-07-07T07:00:00+02:00", end: "2026-07-07T08:00:00+02:00" },
-  { start: "2026-07-07T08:30:00+02:00", end: "2026-07-07T09:30:00+02:00" },
   { start: "2026-07-07T09:30:00+02:00", end: "2026-07-07T10:30:00+02:00" },
   { start: "2026-07-07T18:00:00+02:00", end: "2026-07-07T19:00:00+02:00" },
   { start: "2026-07-08T06:00:00+02:00", end: "2026-07-08T07:00:00+02:00" },
-  { start: "2026-07-08T07:30:00+02:00", end: "2026-07-08T08:30:00+02:00" },
   { start: "2026-07-08T09:30:00+02:00", end: "2026-07-08T10:30:00+02:00" },
   { start: "2026-07-08T16:00:00+02:00", end: "2026-07-08T17:00:00+02:00" },
   { start: "2026-07-09T06:00:00+02:00", end: "2026-07-09T07:00:00+02:00" },
   { start: "2026-07-09T07:00:00+02:00", end: "2026-07-09T08:00:00+02:00" },
-  { start: "2026-07-09T08:30:00+02:00", end: "2026-07-09T09:30:00+02:00" },
   { start: "2026-07-09T09:30:00+02:00", end: "2026-07-09T10:30:00+02:00" },
   { start: "2026-07-09T14:00:00+02:00", end: "2026-07-09T15:00:00+02:00" },
   { start: "2026-07-09T15:00:00+02:00", end: "2026-07-09T16:00:00+02:00" },
@@ -202,16 +157,13 @@ const BOOKED_EVENTS = [
   { start: "2026-07-13T18:00:00+02:00", end: "2026-07-13T19:00:00+02:00" },
   { start: "2026-07-14T06:00:00+02:00", end: "2026-07-14T07:00:00+02:00" },
   { start: "2026-07-14T07:00:00+02:00", end: "2026-07-14T08:00:00+02:00" },
-  { start: "2026-07-14T08:30:00+02:00", end: "2026-07-14T09:30:00+02:00" },
   { start: "2026-07-14T09:30:00+02:00", end: "2026-07-14T10:30:00+02:00" },
   { start: "2026-07-14T18:00:00+02:00", end: "2026-07-14T19:00:00+02:00" },
   { start: "2026-07-15T06:00:00+02:00", end: "2026-07-15T07:00:00+02:00" },
-  { start: "2026-07-15T07:30:00+02:00", end: "2026-07-15T08:30:00+02:00" },
   { start: "2026-07-15T09:30:00+02:00", end: "2026-07-15T10:30:00+02:00" },
   { start: "2026-07-15T16:00:00+02:00", end: "2026-07-15T17:00:00+02:00" },
   { start: "2026-07-16T06:00:00+02:00", end: "2026-07-16T07:00:00+02:00" },
   { start: "2026-07-16T07:00:00+02:00", end: "2026-07-16T08:00:00+02:00" },
-  { start: "2026-07-16T08:30:00+02:00", end: "2026-07-16T09:30:00+02:00" },
   { start: "2026-07-16T09:30:00+02:00", end: "2026-07-16T10:30:00+02:00" },
   { start: "2026-07-16T14:00:00+02:00", end: "2026-07-16T15:00:00+02:00" },
   { start: "2026-07-16T15:00:00+02:00", end: "2026-07-16T16:00:00+02:00" },
@@ -229,22 +181,112 @@ const BOOKED_EVENTS = [
   { start: "2026-07-20T18:00:00+02:00", end: "2026-07-20T19:00:00+02:00" },
   { start: "2026-07-21T06:00:00+02:00", end: "2026-07-21T07:00:00+02:00" },
   { start: "2026-07-21T07:00:00+02:00", end: "2026-07-21T08:00:00+02:00" },
-  { start: "2026-07-21T08:30:00+02:00", end: "2026-07-21T09:30:00+02:00" },
   { start: "2026-07-21T09:30:00+02:00", end: "2026-07-21T10:30:00+02:00" },
   { start: "2026-07-21T18:00:00+02:00", end: "2026-07-21T19:00:00+02:00" },
   { start: "2026-07-22T06:00:00+02:00", end: "2026-07-22T07:00:00+02:00" },
-  { start: "2026-07-22T07:30:00+02:00", end: "2026-07-22T08:30:00+02:00" },
   { start: "2026-07-22T09:30:00+02:00", end: "2026-07-22T10:30:00+02:00" },
   { start: "2026-07-22T16:00:00+02:00", end: "2026-07-22T17:00:00+02:00" },
   { start: "2026-07-23T06:00:00+02:00", end: "2026-07-23T07:00:00+02:00" },
   { start: "2026-07-23T07:00:00+02:00", end: "2026-07-23T08:00:00+02:00" },
-  { start: "2026-07-23T08:30:00+02:00", end: "2026-07-23T09:30:00+02:00" },
   { start: "2026-07-23T09:30:00+02:00", end: "2026-07-23T10:30:00+02:00" },
+  { start: "2026-07-23T13:30:00+02:00", end: "2026-07-23T14:30:00+02:00" },
   { start: "2026-07-23T14:00:00+02:00", end: "2026-07-23T15:00:00+02:00" },
   { start: "2026-07-23T15:00:00+02:00", end: "2026-07-23T16:00:00+02:00" },
   { start: "2026-07-23T18:00:00+02:00", end: "2026-07-23T19:00:00+02:00" },
   { start: "2026-07-24T06:00:00+02:00", end: "2026-07-24T07:00:00+02:00" },
   { start: "2026-07-24T07:00:00+02:00", end: "2026-07-24T08:00:00+02:00" },
+  { start: "2026-07-24T08:00:00+02:00", end: "2026-07-24T09:00:00+02:00" },
+  { start: "2026-07-24T09:00:00+02:00", end: "2026-07-24T10:00:00+02:00" },
+  { start: "2026-07-24T15:00:00+02:00", end: "2026-07-24T16:00:00+02:00" },
+  { start: "2026-07-27T06:00:00+02:00", end: "2026-07-27T07:00:00+02:00" },
+  { start: "2026-07-27T07:00:00+02:00", end: "2026-07-27T08:00:00+02:00" },
+  { start: "2026-07-27T09:30:00+02:00", end: "2026-07-27T10:30:00+02:00" },
+  { start: "2026-07-27T10:30:00+02:00", end: "2026-07-27T11:30:00+02:00" },
+  { start: "2026-07-27T15:00:00+02:00", end: "2026-07-27T16:00:00+02:00" },
+  { start: "2026-07-27T18:00:00+02:00", end: "2026-07-27T19:00:00+02:00" },
+  { start: "2026-07-28T06:00:00+02:00", end: "2026-07-28T07:00:00+02:00" },
+  { start: "2026-07-28T07:00:00+02:00", end: "2026-07-28T08:00:00+02:00" },
+  { start: "2026-07-28T09:30:00+02:00", end: "2026-07-28T10:30:00+02:00" },
+  { start: "2026-07-28T18:00:00+02:00", end: "2026-07-28T19:00:00+02:00" },
+  { start: "2026-07-29T06:00:00+02:00", end: "2026-07-29T07:00:00+02:00" },
+  { start: "2026-07-29T09:30:00+02:00", end: "2026-07-29T10:30:00+02:00" },
+  { start: "2026-07-29T16:00:00+02:00", end: "2026-07-29T17:00:00+02:00" },
+  { start: "2026-07-30T06:00:00+02:00", end: "2026-07-30T07:00:00+02:00" },
+  { start: "2026-07-30T07:00:00+02:00", end: "2026-07-30T08:00:00+02:00" },
+  { start: "2026-07-30T09:30:00+02:00", end: "2026-07-30T10:30:00+02:00" },
+  { start: "2026-07-30T14:00:00+02:00", end: "2026-07-30T15:00:00+02:00" },
+  { start: "2026-07-30T15:00:00+02:00", end: "2026-07-30T16:00:00+02:00" },
+  { start: "2026-07-30T18:00:00+02:00", end: "2026-07-30T19:00:00+02:00" },
+  { start: "2026-07-31T06:00:00+02:00", end: "2026-07-31T07:00:00+02:00" },
+  { start: "2026-07-31T07:00:00+02:00", end: "2026-07-31T08:00:00+02:00" },
+  { start: "2026-07-31T08:00:00+02:00", end: "2026-07-31T09:00:00+02:00" },
+  { start: "2026-07-31T09:00:00+02:00", end: "2026-07-31T10:00:00+02:00" },
+  { start: "2026-07-31T15:00:00+02:00", end: "2026-07-31T16:00:00+02:00" },
+  { start: "2026-08-03T06:00:00+02:00", end: "2026-08-03T07:00:00+02:00" },
+  { start: "2026-08-03T07:00:00+02:00", end: "2026-08-03T08:00:00+02:00" },
+  { start: "2026-08-03T09:30:00+02:00", end: "2026-08-03T10:30:00+02:00" },
+  { start: "2026-08-03T10:30:00+02:00", end: "2026-08-03T11:30:00+02:00" },
+  { start: "2026-08-03T15:00:00+02:00", end: "2026-08-03T16:00:00+02:00" },
+  { start: "2026-08-03T18:00:00+02:00", end: "2026-08-03T19:00:00+02:00" },
+  { start: "2026-08-04T06:00:00+02:00", end: "2026-08-04T07:00:00+02:00" },
+  { start: "2026-08-04T07:00:00+02:00", end: "2026-08-04T08:00:00+02:00" },
+  { start: "2026-08-04T08:30:00+02:00", end: "2026-08-04T09:30:00+02:00" },
+  { start: "2026-08-04T09:30:00+02:00", end: "2026-08-04T10:30:00+02:00" },
+  { start: "2026-08-04T18:00:00+02:00", end: "2026-08-04T19:00:00+02:00" },
+  { start: "2026-08-05T06:00:00+02:00", end: "2026-08-05T07:00:00+02:00" },
+  { start: "2026-08-05T09:30:00+02:00", end: "2026-08-05T10:30:00+02:00" },
+  { start: "2026-08-05T16:00:00+02:00", end: "2026-08-05T17:00:00+02:00" },
+  { start: "2026-08-06T06:00:00+02:00", end: "2026-08-06T07:00:00+02:00" },
+  { start: "2026-08-06T07:00:00+02:00", end: "2026-08-06T08:00:00+02:00" },
+  { start: "2026-08-06T08:30:00+02:00", end: "2026-08-06T09:30:00+02:00" },
+  { start: "2026-08-06T09:30:00+02:00", end: "2026-08-06T10:30:00+02:00" },
+  { start: "2026-08-06T14:00:00+02:00", end: "2026-08-06T15:00:00+02:00" },
+  { start: "2026-08-06T15:00:00+02:00", end: "2026-08-06T16:00:00+02:00" },
+  { start: "2026-08-06T18:00:00+02:00", end: "2026-08-06T19:00:00+02:00" },
+  { start: "2026-08-07T06:00:00+02:00", end: "2026-08-07T07:00:00+02:00" },
+  { start: "2026-08-07T07:00:00+02:00", end: "2026-08-07T08:00:00+02:00" },
+  { start: "2026-08-07T08:00:00+02:00", end: "2026-08-07T09:00:00+02:00" },
+  { start: "2026-08-07T09:00:00+02:00", end: "2026-08-07T10:00:00+02:00" },
+  { start: "2026-08-07T15:00:00+02:00", end: "2026-08-07T16:00:00+02:00" },
+  { start: "2026-08-10T06:00:00+02:00", end: "2026-08-10T07:00:00+02:00" },
+  { start: "2026-08-10T07:00:00+02:00", end: "2026-08-10T08:00:00+02:00" },
+  { start: "2026-08-10T09:30:00+02:00", end: "2026-08-10T10:30:00+02:00" },
+  { start: "2026-08-10T10:30:00+02:00", end: "2026-08-10T11:30:00+02:00" },
+  { start: "2026-08-10T15:00:00+02:00", end: "2026-08-10T16:00:00+02:00" },
+  { start: "2026-08-10T18:00:00+02:00", end: "2026-08-10T19:00:00+02:00" },
+  { start: "2026-08-11T06:00:00+02:00", end: "2026-08-11T07:00:00+02:00" },
+  { start: "2026-08-11T07:00:00+02:00", end: "2026-08-11T08:00:00+02:00" },
+  { start: "2026-08-11T08:30:00+02:00", end: "2026-08-11T09:30:00+02:00" },
+  { start: "2026-08-11T09:30:00+02:00", end: "2026-08-11T10:30:00+02:00" },
+  { start: "2026-08-11T17:00:00+02:00", end: "2026-08-11T18:00:00+02:00" },
+  { start: "2026-08-11T18:00:00+02:00", end: "2026-08-11T19:00:00+02:00" },
+  { start: "2026-08-12T06:00:00+02:00", end: "2026-08-12T07:00:00+02:00" },
+  { start: "2026-08-12T09:30:00+02:00", end: "2026-08-12T10:30:00+02:00" },
+  { start: "2026-08-12T16:00:00+02:00", end: "2026-08-12T17:00:00+02:00" },
+  { start: "2026-08-13T06:00:00+02:00", end: "2026-08-13T07:00:00+02:00" },
+  { start: "2026-08-13T07:00:00+02:00", end: "2026-08-13T08:00:00+02:00" },
+  { start: "2026-08-13T08:30:00+02:00", end: "2026-08-13T09:30:00+02:00" },
+  { start: "2026-08-13T09:30:00+02:00", end: "2026-08-13T10:30:00+02:00" },
+  { start: "2026-08-13T14:00:00+02:00", end: "2026-08-13T15:00:00+02:00" },
+  { start: "2026-08-13T15:00:00+02:00", end: "2026-08-13T16:00:00+02:00" },
+  { start: "2026-08-13T18:00:00+02:00", end: "2026-08-13T19:00:00+02:00" },
+  { start: "2026-08-14T06:00:00+02:00", end: "2026-08-14T07:00:00+02:00" },
+  { start: "2026-08-14T07:00:00+02:00", end: "2026-08-14T08:00:00+02:00" },
+  { start: "2026-08-14T08:00:00+02:00", end: "2026-08-14T09:00:00+02:00" },
+  { start: "2026-08-14T15:00:00+02:00", end: "2026-08-14T16:00:00+02:00" },
+  { start: "2026-08-17T06:00:00+02:00", end: "2026-08-17T07:00:00+02:00" },
+  { start: "2026-08-17T07:00:00+02:00", end: "2026-08-17T08:00:00+02:00" },
+  { start: "2026-08-17T09:30:00+02:00", end: "2026-08-17T10:30:00+02:00" },
+  { start: "2026-08-17T10:30:00+02:00", end: "2026-08-17T11:30:00+02:00" },
+  { start: "2026-08-17T15:00:00+02:00", end: "2026-08-17T16:00:00+02:00" },
+  { start: "2026-08-17T18:00:00+02:00", end: "2026-08-17T19:00:00+02:00" },
+  { start: "2026-08-18T06:00:00+02:00", end: "2026-08-18T07:00:00+02:00" },
+  { start: "2026-08-18T07:00:00+02:00", end: "2026-08-18T08:00:00+02:00" },
+  { start: "2026-08-18T08:30:00+02:00", end: "2026-08-18T09:30:00+02:00" },
+  { start: "2026-08-18T09:30:00+02:00", end: "2026-08-18T10:30:00+02:00" },
+  { start: "2026-08-18T17:00:00+02:00", end: "2026-08-18T18:00:00+02:00" },
+  { start: "2026-08-18T18:00:00+02:00", end: "2026-08-18T19:00:00+02:00" },
+  { start: "2026-08-19T06:00:00+02:00", end: "2026-08-19T07:00:00+02:00" },
 ];
 
 // Logo SVG — faithful recreation of The Greek warrior silhouette
@@ -296,13 +338,18 @@ function getHours(d){return isWeekend(d)?WORKING_HOURS.weekend:WORKING_HOURS.wee
 function formatTime(d){const h=d.getHours();return `${h<10?"0"+h:h}:00`;}
 function formatDate(d){return `${DAYS_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;}
 
-function generateSlots(date){
-  const{start,end}=getHours(date);const slots=[];
-  for(let h=start;h<end;h++){
+function generateSlots(date, trainerId="johan"){
+  const trainer = TRAINERS.find(t=>t.id===trainerId) || TRAINERS[0];
+  const hours = getTrainerSlotsForDay(trainer, date);
+  const slots = [];
+  for(const h of hours){
     const s=new Date(date);s.setHours(h,0,0,0);
     const e=new Date(date);e.setHours(h+1,0,0,0);
-    const booked=BOOKED_EVENTS.some(b=>new Date(b.start)<e&&new Date(b.end)>s);
-    slots.push({time:s,endTime:e,key:s.toISOString(),booked});
+    // Only Johan's slots check against the real Google Calendar sync
+    const booked = trainerId==="johan"
+      ? BOOKED_EVENTS.some(b=>new Date(b.start)<e&&new Date(b.end)>s)
+      : false;
+    slots.push({time:s,endTime:e,key:`${trainerId}-${s.toISOString()}`,booked,trainerId});
   }
   return slots;
 }
@@ -409,6 +456,7 @@ export default function TheGreek(){
   const [pin,setPin]=useState("");
   const [pinError,setPinError]=useState(false);
   const [cView,setCView]=useState("calendar");
+  const [selectedTrainer,setSelectedTrainer]=useState("johan");
   const [currentMonth,setCurrentMonth]=useState(new Date(today.getFullYear(),today.getMonth(),1));
   const [selectedDate,setSelectedDate]=useState(null);
   const [selectedSlot,setSelectedSlot]=useState(null);
@@ -433,6 +481,14 @@ export default function TheGreek(){
   const [newClient,setNewClient]=useState({...EMPTY_CLIENT});
 
   useEffect(()=>{if(appMode==="trainer"){loadRequests().then(setRequests);loadClients().then(setClients);}},[appMode]);
+
+  // If multiple trainers are active, show picker on first load
+  useEffect(()=>{
+    const activeTrainers = TRAINERS.filter(t=>trainerIsActive(t, today));
+    if(activeTrainers.length>1 && cView==="calendar" && !selectedDate){
+      setCView("trainerSelect");
+    }
+  },[]);
 
   // Handle email opt-in/opt-out link clicks
   useEffect(()=>{
@@ -504,7 +560,7 @@ export default function TheGreek(){
   async function submitRequest(){
     if(!clientForm.name.trim()||!clientForm.phone.trim())return;
     setSubmitting(true);
-    const req={id:Date.now().toString(),name:clientForm.name,phone:clientForm.phone,date:formatDate(selectedDate),dateISO:selectedDate.toISOString(),time:formatTime(selectedSlot.time),timeEnd:formatTime(selectedSlot.endTime),slotKey:selectedSlot.key,status:"pending",submittedAt:new Date().toISOString()};
+    const req={id:Date.now().toString(),name:clientForm.name,phone:clientForm.phone,date:formatDate(selectedDate),dateISO:selectedDate.toISOString(),time:formatTime(selectedSlot.time),timeEnd:formatTime(selectedSlot.endTime),slotKey:selectedSlot.key,trainerId:selectedTrainer||"johan",status:"pending",submittedAt:new Date().toISOString()};
     const existing=await loadRequests();
     await saveRequests([...existing,req]);
     setClientForm({name:"",phone:""});setSelectedSlot(null);setCView("submitted");setSubmitting(false);
@@ -627,7 +683,7 @@ export default function TheGreek(){
     const cells=[];for(let i=0;i<fd;i++)cells.push(null);for(let d=1;d<=tot;d++)cells.push(new Date(y,m,d));return cells;
   }
 
-  const slots=selectedDate?generateSlots(selectedDate):[];
+  const slots=selectedDate?generateSlots(selectedDate, selectedTrainer||"johan"):[];
   const pendingCount=requests.filter(r=>r.status==="pending").length;
 
   if(alertPrefResult){
@@ -743,11 +799,16 @@ export default function TheGreek(){
               <div>
                 {requests.filter(r=>r.status==="pending").length===0
                   ?<div style={{textAlign:"center",padding:"50px 0",color:"#555",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO PENDING REQUESTS</div>
-                  :requests.filter(r=>r.status==="pending").map(req=>(
+                  :requests.filter(r=>r.status==="pending").map(req=>{
+                    const reqTrainer = TRAINERS.find(t=>t.id===(req.trainerId||"johan")) || TRAINERS[0];
+                    return(
                   <div key={req.id} className="card pending">
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
                       <div>
-                        <div style={{fontFamily:"'Cinzel',serif",fontSize:15,color:"#c9a84c",fontWeight:600}}>{req.name}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:15,color:"#c9a84c",fontWeight:600}}>{req.name}</div>
+                          <span style={{fontSize:9,color:reqTrainer.color,border:`1px solid ${reqTrainer.color}60`,padding:"2px 7px",borderRadius:10,letterSpacing:1}}>{reqTrainer.name.toUpperCase()}</span>
+                        </div>
                         <div style={{fontSize:11,color:"#555",marginTop:3}}>{req.date}</div>
                         <div style={{fontSize:12,marginTop:2}}>{req.time} – {req.timeEnd}</div>
                       </div>
@@ -763,7 +824,7 @@ export default function TheGreek(){
                       </button>
                     </div>
                   </div>
-                ))}
+                );})}
               </div>
             )}
 
@@ -1200,13 +1261,49 @@ export default function TheGreek(){
               </div>
             )}
 
+            {cView==="trainerSelect"&&(
+              <div className="fade">
+                <div style={{marginBottom:24}}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#555",letterSpacing:3,marginBottom:8}}>CHOOSE YOUR TRAINER</div>
+                  <div className="divider"/>
+                </div>
+                {TRAINERS.filter(t=>trainerIsActive(t, today)).map(t=>(
+                  <button key={t.id} onClick={()=>{setSelectedTrainer(t.id);setCView("calendar");}}
+                    style={{width:"100%",background:"#141414",border:`1px solid ${t.color}40`,borderLeft:`3px solid ${t.color}`,padding:"18px 20px",marginBottom:10,borderRadius:2,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s"}}>
+                    <div>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:t.color,letterSpacing:1}}>{t.name}</div>
+                      <div style={{fontSize:10,color:"#555",marginTop:4,letterSpacing:1}}>
+                        {t.id==="johan" ? "MON–FRI 06:00–21:00 · SAT–SUN 07:00–14:00" : "TUE & THU · 06:00–08:00 & 15:00–18:00"}
+                      </div>
+                    </div>
+                    <div style={{fontSize:20,color:"#333"}}>›</div>
+                  </button>
+                ))}
+                <div style={{marginTop:24,paddingTop:16,borderTop:"1px solid #1a1a1a",textAlign:"center"}}>
+                  <button className="btn-ghost" onClick={()=>setPortalView("login")}
+                    style={{padding:"12px 28px",fontSize:10,borderRadius:2,letterSpacing:2,width:"100%"}}>
+                    MANAGE MY BOOKING
+                  </button>
+                </div>
+              </div>
+            )}
+
             {cView==="calendar"&&(
               <div className="fade">
                 <div style={{marginBottom:18}}>
-                  <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#555",letterSpacing:3,marginBottom:8}}>BOOK A SESSION</div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#555",letterSpacing:3}}>
+                      BOOK WITH {(TRAINERS.find(t=>t.id===selectedTrainer)||TRAINERS[0]).name.toUpperCase()}
+                    </div>
+                    {TRAINERS.filter(t=>trainerIsActive(t,today)).length>1&&(
+                      <button className="btn-ghost" onClick={()=>setCView("trainerSelect")} style={{padding:"4px 10px",fontSize:9,borderRadius:2}}>CHANGE</button>
+                    )}
+                  </div>
                   <div className="divider"/>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#333",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>
-                    <span>MON–FRI  06:00–21:00</span><span>SAT–SUN  07:00–14:00</span>
+                    {selectedTrainer==="dina"
+                      ? <span>TUE & THU  06:00–08:00 & 15:00–18:00</span>
+                      : <><span>MON–FRI  06:00–21:00</span><span>SAT–SUN  07:00–14:00</span></>}
                   </div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
@@ -1267,8 +1364,8 @@ export default function TheGreek(){
             {cView==="form"&&selectedSlot&&(
               <div className="fade">
                 <button className="btn-ghost" onClick={()=>setCView("slots")} style={{padding:"6px 14px",fontSize:10,borderRadius:2,marginBottom:20}}>← BACK</button>
-                <div style={{background:"#141414",border:"1px solid #222",borderLeft:"3px solid #c9a84c",padding:16,marginBottom:24,borderRadius:2}}>
-                  <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:3,color:"#555",marginBottom:6}}>SESSION REQUEST</div>
+                <div style={{background:"#141414",border:"1px solid #222",borderLeft:`3px solid ${(TRAINERS.find(t=>t.id===selectedTrainer)||TRAINERS[0]).color}`,padding:16,marginBottom:24,borderRadius:2}}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:3,color:"#555",marginBottom:6}}>SESSION REQUEST — {(TRAINERS.find(t=>t.id===selectedTrainer)||TRAINERS[0]).name.toUpperCase()}</div>
                   <div style={{fontFamily:"'Cinzel',serif",fontSize:18,color:"#c9a84c"}}>{formatTime(selectedSlot.time)} – {formatTime(selectedSlot.endTime)}</div>
                   <div style={{fontSize:11,color:"#555",marginTop:4}}>{formatDate(selectedDate)}</div>
                 </div>
