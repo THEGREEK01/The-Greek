@@ -1,4 +1,3 @@
-// DEBUG VERSION - shows env var status instead of redirecting
 export default function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const allEnvKeys = Object.keys(process.env).filter(k => k.startsWith('GOOGLE') || k.startsWith('SUPABASE'));
