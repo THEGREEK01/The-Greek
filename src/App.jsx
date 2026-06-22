@@ -323,9 +323,9 @@ function countSessions(history, from, to){
     return d>=from && d<=to;
   }).length;
 }
-function getUpcomingSessions(requests, bookedEvents){
+function getUpcomingSessions(requests, bookedEvents, daysAhead=30){
   const now = new Date(); now.setHours(0,0,0,0);
-  const end = new Date(now); end.setDate(now.getDate()+30);
+  const end = new Date(now); end.setDate(now.getDate()+daysAhead);
   // From approved requests
   const fromReqs = requests
     .filter(r=>r.status==="approved")
@@ -456,6 +456,13 @@ export default function TheGreek(){
   const [pin,setPin]=useState("");
   const [pinError,setPinError]=useState(false);
   const [cView,setCView]=useState("calendar");
+  const [calViewMode,setCalViewMode]=useState("month"); // month | week
+  const [weekStartDate,setWeekStartDate]=useState(()=>{
+    const d=new Date(); d.setHours(0,0,0,0);
+    const day=d.getDay();
+    const mon=new Date(d); mon.setDate(d.getDate()-(day===0?6:day-1));
+    return mon;
+  });
   const [selectedTrainer,setSelectedTrainer]=useState("johan");
   const [currentMonth,setCurrentMonth]=useState(new Date(today.getFullYear(),today.getMonth(),1));
   const [selectedDate,setSelectedDate]=useState(null);
@@ -469,6 +476,7 @@ export default function TheGreek(){
   const [portalClient,setPortalClient]=useState(null);
   const [portalError,setPortalError]=useState(false);
   const [clientSearch,setClientSearch]=useState("");
+  const [upcomingRange,setUpcomingRange]=useState("week"); // week | month
   const [alertPrefResult,setAlertPrefResult]=useState(null);
   const [requests,setRequests]=useState([]);
   const [clients,setClients]=useState([]);
@@ -683,6 +691,22 @@ export default function TheGreek(){
     const cells=[];for(let i=0;i<fd;i++)cells.push(null);for(let d=1;d<=tot;d++)cells.push(new Date(y,m,d));return cells;
   }
 
+  function buildWeekDays(){
+    const days=[];
+    for(let i=0;i<7;i++){
+      const d=new Date(weekStartDate); d.setDate(weekStartDate.getDate()+i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  function getDaySlotStats(date, trainerId){
+    const daySlots = generateSlots(date, trainerId);
+    const total = daySlots.length;
+    const booked = daySlots.filter(s=>s.booked).length;
+    return { total, booked, available: total-booked };
+  }
+
   const slots=selectedDate?generateSlots(selectedDate, selectedTrainer||"johan"):[];
   const pendingCount=requests.filter(r=>r.status==="pending").length;
 
@@ -766,8 +790,16 @@ export default function TheGreek(){
 
             {tView==="upcoming"&&(
               <div className="fade">
+                <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #222",borderRadius:2,overflow:"hidden"}}>
+                  {[["week","THIS WEEK"],["month","THIS MONTH"]].map(([v,label])=>(
+                    <button key={v} onClick={()=>setUpcomingRange(v)}
+                      style={{flex:1,padding:"9px",background:upcomingRange===v?"#c9a84c":"transparent",color:upcomingRange===v?"#080808":"#555",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 {(()=>{
-                  const sessions = getUpcomingSessions(requests, BOOKED_EVENTS);
+                  const sessions = getUpcomingSessions(requests, BOOKED_EVENTS, upcomingRange==="week"?7:30);
                   if(sessions.length===0) return <div style={{textAlign:"center",padding:"50px 0",color:"#555",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO UPCOMING SESSIONS</div>;
                   let lastDate = null;
                   return sessions.map((s,i)=>{
@@ -1306,6 +1338,18 @@ export default function TheGreek(){
                       : <><span>MON–FRI  06:00–21:00</span><span>SAT–SUN  07:00–14:00</span></>}
                   </div>
                 </div>
+
+                <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #222",borderRadius:2,overflow:"hidden"}}>
+                  {["month","week"].map(v=>(
+                    <button key={v} onClick={()=>setCalViewMode(v)}
+                      style={{flex:1,padding:"9px",background:calViewMode===v?"#c9a84c":"transparent",color:calViewMode===v?"#080808":"#555",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+
+                {calViewMode==="month" && (
+                <>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                   <button className="btn-ghost" onClick={()=>setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()-1,1))} style={{padding:"6px 14px",fontSize:14,borderRadius:2}}>←</button>
                   <div style={{fontFamily:"'Cinzel',serif",fontSize:15,letterSpacing:3,color:"#c9a84c"}}>{MONTHS[currentMonth.getMonth()].toUpperCase()} {currentMonth.getFullYear()}</div>
@@ -1321,6 +1365,70 @@ export default function TheGreek(){
                     return <button key={i} onClick={()=>{if(!past){setSelectedDate(date);setSelectedSlot(null);setCView("slots");}}} className={`cal-cell${past?" past":""}${sel?" selected":""}${isToday?" today":""}${!sel&&wknd&&!past?" weekend":""}`}>{date.getDate()}</button>;
                   })}
                 </div>
+                </>
+                )}
+
+                {calViewMode==="week" && (
+                <>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                  <button className="btn-ghost" onClick={()=>{const d=new Date(weekStartDate);d.setDate(d.getDate()-7);setWeekStartDate(d);}} style={{padding:"6px 14px",fontSize:14,borderRadius:2}}>←</button>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:13,letterSpacing:2,color:"#c9a84c",textAlign:"center"}}>
+                    {(() => {
+                      const wd=buildWeekDays(); const first=wd[0], last=wd[6];
+                      const sameMonth = first.getMonth()===last.getMonth();
+                      return sameMonth
+                        ? `${first.getDate()}–${last.getDate()} ${MONTHS[first.getMonth()].toUpperCase()}`
+                        : `${first.getDate()} ${MONTHS[first.getMonth()].slice(0,3).toUpperCase()} – ${last.getDate()} ${MONTHS[last.getMonth()].slice(0,3).toUpperCase()}`;
+                    })()}
+                  </div>
+                  <button className="btn-ghost" onClick={()=>{const d=new Date(weekStartDate);d.setDate(d.getDate()+7);setWeekStartDate(d);}} style={{padding:"6px 14px",fontSize:14,borderRadius:2}}>→</button>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {buildWeekDays().map((date,i)=>{
+                    const past = date < today;
+                    const isToday = date.toDateString()===today.toDateString();
+                    const stats = getDaySlotStats(date, selectedTrainer||"johan");
+                    const noSlots = stats.total===0;
+                    return (
+                      <button key={i} disabled={past||noSlots}
+                        onClick={()=>{setSelectedDate(date);setSelectedSlot(null);setCView("slots");}}
+                        style={{
+                          display:"flex",justifyContent:"space-between",alignItems:"center",
+                          background:isToday?"#1a1a1a":"#0c0c0c",
+                          border:`1px solid ${isToday?"#7a6530":"#1a1a1a"}`,
+                          borderRadius:2,padding:"12px 16px",
+                          cursor:(past||noSlots)?"default":"pointer",
+                          opacity:(past||noSlots)?0.35:1,
+                          transition:"all 0.15s",
+                        }}>
+                        <div style={{textAlign:"left"}}>
+                          <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#f0ead6",letterSpacing:1}}>
+                            {DAYS_FULL[date.getDay()].toUpperCase()}
+                          </div>
+                          <div style={{fontSize:10,color:"#555",marginTop:2}}>
+                            {date.getDate()} {MONTHS[date.getMonth()].slice(0,3).toUpperCase()}
+                          </div>
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                          {noSlots ? (
+                            <div style={{fontSize:10,color:"#444",letterSpacing:1}}>NOT WORKING</div>
+                          ) : (
+                            <>
+                              <div style={{fontFamily:"'Cinzel',serif",fontSize:13,color:stats.available>0?"#2ecc71":"#c0392b"}}>
+                                {stats.available} OPEN
+                              </div>
+                              <div style={{fontSize:9,color:"#555",marginTop:2}}>
+                                {stats.booked}/{stats.total} booked
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                </>
+                )}
 
 
               <div style={{marginTop:24,paddingTop:16,borderTop:"1px solid #1a1a1a",textAlign:"center"}}>
