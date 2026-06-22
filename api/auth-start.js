@@ -1,3 +1,4 @@
+// Redirects the trainer to Google's OAuth consent screen
 export default function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = `https://${req.headers.host}/api/auth-callback`;
@@ -11,6 +12,5 @@ export default function handler(req, res) {
     `&access_type=offline` +
     `&prompt=consent`;
 
-  // DEBUG: show the URL instead of redirecting
-  res.status(200).json({ generatedUrl: url, clientId, redirectUri });
+  res.redirect(302, url);
 }
