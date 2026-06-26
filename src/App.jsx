@@ -28,10 +28,16 @@ const TRAINERS = [
     startDate: "2026-09-01", // only active from September 1st
     getHours: (date) => {
       const day = date.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
-      if (day === 2 || day === 4) { // Tuesday or Thursday
-        return [{ start: 6, end: 8 }, { start: 15, end: 18 }];
+      const ranges = [];
+      // Monday-Friday 06:00-08:00
+      if (day >= 1 && day <= 5) {
+        ranges.push({ start: 6, end: 8 });
       }
-      return null; // not working this day
+      // Monday & Wednesday 15:00-19:00
+      if (day === 1 || day === 3) {
+        ranges.push({ start: 15, end: 19 });
+      }
+      return ranges.length ? ranges : null;
     },
   },
 ];
@@ -1658,7 +1664,7 @@ export default function TheGreek(){
                     <div>
                       <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:t.color,letterSpacing:1}}>{t.name}</div>
                       <div style={{fontSize:10,color:"#555",marginTop:4,letterSpacing:1}}>
-                        {t.id==="johan" ? "MON–FRI 06:00–21:00 · SAT–SUN 07:00–14:00" : "TUE & THU · 06:00–08:00 & 15:00–18:00"}
+                        {t.id==="johan" ? "MON–FRI 06:00–21:00 · SAT–SUN 07:00–14:00" : "MON–FRI 06:00–08:00 · MON & WED 15:00–19:00"}
                       </div>
                     </div>
                     <div style={{fontSize:20,color:"#333"}}>›</div>
@@ -1687,7 +1693,7 @@ export default function TheGreek(){
                   <div className="divider"/>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#333",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>
                     {selectedTrainer==="dina"
-                      ? <span>TUE & THU  06:00–08:00 & 15:00–18:00</span>
+                      ? <span>MON–FRI 06:00–08:00 · MON & WED 15:00–19:00</span>
                       : <><span>MON–FRI  06:00–21:00</span><span>SAT–SUN  07:00–14:00</span></>}
                   </div>
                 </div>
