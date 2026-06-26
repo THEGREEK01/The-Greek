@@ -832,6 +832,39 @@ export default function TheGreek(){
     setClientForm({name:"",phone:""});setSelectedSlot(null);setCView("submitted");setSubmitting(false);
   }
 
+  async function pushToGoogleCalendar(req){
+    try{
+      const trainer = TRAINERS.find(t=>t.id===(req.trainerId||"johan")) || TRAINERS[0];
+      const datePart = req.dateISO.split("T")[0];
+      // Determine offset (+02:00 summer / +01:00 winter) based on the stored slot time itself
+      const refDate = new Date(req.dateISO);
+      const offsetMin = -refDate.getTimezoneOffset(); // not reliable server-side, so default to known CPH offset by month
+      const month = refDate.getUTCMonth(); // 0=Jan
+      const isDST = month >= 2 && month <= 9; // rough CET/CEST window (Mar-Oct)
+      const offset = isDST ? "+02:00" : "+01:00";
+      const startISO = `${datePart}T${req.time}:00${offset}`;
+      const endISO = `${datePart}T${req.timeEnd}:00${offset}`;
+      const res = await fetch("/api/calendar-push", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          title: `PT Session – ${req.name}`,
+          startISO,
+          endISO,
+          description: `Booked via The Greek app.\nPhone: ${req.phone}\nTrainer: ${trainer.name}`,
+        }),
+      });
+      const data = await res.json();
+      if(!data.success){
+        console.error("Calendar push failed:", data.error);
+      }
+      return data;
+    }catch(err){
+      console.error("Calendar push error:", err);
+      return { success: false, error: err.message };
+    }
+  }
+
   async function handleDecision(id,decision){
     setActionLoading(id+decision);
     const updated=requests.map(r=>r.id===id?{...r,status:decision}:r);
@@ -847,6 +880,7 @@ export default function TheGreek(){
       cancel_link: decision==="approved" ? `To cancel: reply to this email or contact your trainer.` : "",
     });
     if(decision==="approved"&&req){
+      await pushToGoogleCalendar(req);
       const existing=await loadClients();
       if(!existing.find(c=>c.phone===req.phone)){
         const nc={...EMPTY_CLIENT,id:Date.now().toString(),name:req.name,phone:req.phone,firstSession:req.date,lastSession:req.date,totalSessions:1,trainingHistory:[{date:req.date,time:req.time,notes:"First session booked"}]};
