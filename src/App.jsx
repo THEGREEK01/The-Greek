@@ -636,6 +636,32 @@ async function saveRequests(reqs){ await supaSetAll("booking_requests", reqs); }
 async function loadClients(){ return await supaGet("clients"); }
 async function saveClients(c){ await supaSetAll("clients", c); }
 
+async function getConfig(key){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config?key=eq.${encodeURIComponent(key)}&select=value`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+    });
+    if(!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0]?.value ?? null;
+  } catch { return null; }
+}
+
+async function setConfig(key, value){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/app_config?on_conflict=key`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify([{ key, value }])
+    });
+  } catch {}
+}
+
 const EMPTY_CLIENT = {name:"",phone:"",email:"",birthday:"",address:"",emergencyContact:"",age:"",weight:"",height:"",bodyFat:"",familyInfo:"",medicalConditions:"",injuries:"",medications:"",allergies:"",fitnessGoal:"",experienceLevel:"",trainingProgram:"",sessionsPerWeek:"",preferredTime:"",notes:"",trainingHistory:[],totalSessions:0,status:"active",clientCode:"",wantsCancelAlerts:null};
 
 const CSS = `
@@ -693,8 +719,12 @@ function TXA({label,value,onChange,placeholder,rows=2}){
 
 export default function TheGreek(){
   const today=new Date();today.setHours(0,0,0,0);
-  const [appMode,setAppMode]=useState("client"); // client | pinEntry | trainer | assistant
+  const [appMode,setAppMode]=useState("client"); // client | pinEntry | trainer | assistant | dina | dinaSetPin
   const [pin,setPin]=useState("");
+  const [dinaPin,setDinaPin]=useState(null); // loaded from Supabase
+  const [dinaPinChanged,setDinaPinChanged]=useState(false);
+  const [newDinaPin,setNewDinaPin]=useState("");
+  const [confirmDinaPin,setConfirmDinaPin]=useState("");
   const [pinError,setPinError]=useState(false);
   const [cView,setCView]=useState("calendar");
   const [calViewMode,setCalViewMode]=useState("month"); // month | week
@@ -731,7 +761,17 @@ export default function TheGreek(){
   const [addingClient,setAddingClient]=useState(false);
   const [newClient,setNewClient]=useState({...EMPTY_CLIENT});
 
-  useEffect(()=>{if(appMode==="trainer"){loadRequests().then(setRequests);loadClients().then(setClients);}},[appMode]);
+  useEffect(()=>{if(appMode==="trainer"||appMode==="dina"){loadRequests().then(setRequests);loadClients().then(setClients);}},[appMode]);
+
+  // Load Dina's current PIN and change-status on app start
+  useEffect(()=>{
+    (async()=>{
+      const storedPin = await getConfig("dina_pin");
+      const changedFlag = await getConfig("dina_pin_changed");
+      setDinaPin(storedPin || "1234");
+      setDinaPinChanged(changedFlag === "true");
+    })();
+  },[]);
 
   // If multiple trainers are active, show picker on first load
   useEffect(()=>{
@@ -785,11 +825,30 @@ export default function TheGreek(){
   function handlePinDigit(d){
     if(pin.length>=6)return;
     const next=pin+d;setPin(next);setPinError(false);
-    if(next.length===6){
-      if(next===TRAINER_PIN){setAppMode("trainer");setPin("");}
-      else if(next===ASSISTANT_PIN){setAppMode("assistant");setPin("");}
-      else{setPinError(true);setTimeout(()=>setPin(""),700);}
+    if(next===TRAINER_PIN){setAppMode("trainer");setPin("");return;}
+    if(next===ASSISTANT_PIN){setAppMode("assistant");setPin("");return;}
+    if(dinaPin && next===dinaPin){
+      setPin("");
+      if(!dinaPinChanged){ setAppMode("dinaSetPin"); }
+      else { setAppMode("dina"); }
+      return;
     }
+    if(next.length===6){
+      setPinError(true);setTimeout(()=>setPin(""),700);
+    }
+  }
+
+  async function handleDinaPinChange(){
+    if(newDinaPin.length<4||newDinaPin!==confirmDinaPin){
+      alert("PINs must match and be at least 4 digits.");
+      return;
+    }
+    await setConfig("dina_pin", newDinaPin);
+    await setConfig("dina_pin_changed", "true");
+    setDinaPin(newDinaPin);
+    setDinaPinChanged(true);
+    setNewDinaPin("");setConfirmDinaPin("");
+    setAppMode("dina");
   }
 
   async function sendEmail(toEmail, toName, templateParams){
@@ -1074,9 +1133,9 @@ export default function TheGreek(){
             <div style={{fontSize:9,letterSpacing:3,color:"#555",marginTop:2}}>PERSONAL TRAINING</div>
           </div>
         </div>
-        <button onClick={()=>(appMode==="trainer"||appMode==="assistant")?(setAppMode("client"),setCView("calendar"),setSelectedClient(null),setEditingClient(null)):setAppMode("pinEntry")}
-          style={{background:"none",border:"1px solid #222",color:(appMode==="trainer"||appMode==="assistant")?"#c9a84c":"#444",fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:2,padding:"7px 12px",cursor:"pointer",borderRadius:2,position:"relative"}}>
-          {(appMode==="trainer"||appMode==="assistant")?"← EXIT":"TRAINER"}
+        <button onClick={()=>["trainer","assistant","dina","dinaSetPin"].includes(appMode)?(setAppMode("client"),setCView("calendar"),setSelectedClient(null),setEditingClient(null)):setAppMode("pinEntry")}
+          style={{background:"none",border:"1px solid #222",color:["trainer","assistant","dina","dinaSetPin"].includes(appMode)?"#c9a84c":"#444",fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:2,padding:"7px 12px",cursor:"pointer",borderRadius:2,position:"relative"}}>
+          {["trainer","assistant","dina","dinaSetPin"].includes(appMode)?"← EXIT":"TRAINER"}
           {pendingCount>0&&appMode==="client"&&<span style={{position:"absolute",top:-6,right:-6,background:"#c0392b",color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:9,display:"flex",alignItems:"center",justifyContent:"center"}}>{pendingCount}</span>}
         </button>
       </div>
@@ -1101,6 +1160,132 @@ export default function TheGreek(){
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* DINA - FORCED PIN CHANGE ON FIRST LOGIN */}
+        {appMode==="dinaSetPin"&&(
+          <div className="fade" style={{textAlign:"center",paddingTop:40}}>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:12,letterSpacing:4,color:"#7ec4c9",marginBottom:8}}>WELCOME, DINA</div>
+            <div style={{fontSize:11,color:"#555",letterSpacing:1,marginBottom:32,lineHeight:1.8,maxWidth:320,margin:"0 auto 32px"}}>
+              For security, please set your own PIN before continuing.
+            </div>
+            <div style={{maxWidth:280,margin:"0 auto",display:"flex",flexDirection:"column",gap:14}}>
+              <div className="field">
+                <div className="field-label">NEW PIN (4–6 DIGITS)</div>
+                <input type="password" inputMode="numeric" value={newDinaPin} onChange={e=>setNewDinaPin(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="••••"/>
+              </div>
+              <div className="field">
+                <div className="field-label">CONFIRM PIN</div>
+                <input type="password" inputMode="numeric" value={confirmDinaPin} onChange={e=>setConfirmDinaPin(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="••••"/>
+              </div>
+              <button className="btn-gold" onClick={handleDinaPinChange} style={{padding:"14px",fontSize:11,borderRadius:2,marginTop:6}}>
+                SET PIN & CONTINUE →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* DINA DASHBOARD - scoped to her own bookings/clients only */}
+        {appMode==="dina"&&(
+          <div className="fade">
+            <div style={{display:"flex",gap:0,marginBottom:20,border:"1px solid #222",borderRadius:2,overflow:"hidden"}}>
+              {["requests","clients","history"].map(v=>(
+                <button key={v} onClick={()=>{setTView(v);setSelectedClient(null);setEditingClient(null);}}
+                  className={"tab-btn"+(tView===v?" active":"")} style={tView===v?{background:"#7ec4c9",color:"#080808"}:{}}>
+                  {v.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            {tView==="requests"&&(()=>{
+              const dinaRequests = requests.filter(r=>(r.trainerId||"johan")==="dina"&&r.status==="pending");
+              return(
+                <div>
+                  {dinaRequests.length===0
+                    ? <div style={{textAlign:"center",padding:"50px 0",color:"#555",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO PENDING REQUESTS</div>
+                    : dinaRequests.map(req=>(
+                      <div key={req.id} className="card pending" style={{borderLeftColor:"#7ec4c9"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+                          <div>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:15,color:"#7ec4c9",fontWeight:600}}>{req.name}</div>
+                            <div style={{fontSize:11,color:"#555",marginTop:3}}>{req.date}</div>
+                            <div style={{fontSize:12,marginTop:2}}>{req.time} – {req.timeEnd}</div>
+                          </div>
+                          <div style={{fontSize:9,letterSpacing:2,color:"#7a6530",fontFamily:"'Cinzel',serif"}}>PENDING</div>
+                        </div>
+                        <div style={{fontSize:11,color:"#888",marginBottom:12}}>📞 {req.phone}</div>
+                        <div style={{display:"flex",gap:8}}>
+                          <button className="btn-green" onClick={()=>handleDecision(req.id,"approved")} style={{flex:1,padding:"10px",fontSize:10,borderRadius:2}}>
+                            {actionLoading===req.id+"approved"?<span className="pulse">...</span>:"✓ APPROVE"}
+                          </button>
+                          <button className="btn-red" onClick={()=>handleDecision(req.id,"rejected")} style={{flex:1,padding:"10px",fontSize:10,borderRadius:2}}>
+                            {actionLoading===req.id+"rejected"?<span className="pulse">...</span>:"✗ DECLINE"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              );
+            })()}
+
+            {tView==="clients"&&(()=>{
+              const dinaClientPhones = new Set(requests.filter(r=>(r.trainerId||"johan")==="dina"&&r.status==="approved").map(r=>r.phone));
+              const dinaClients = clients.filter(c=>dinaClientPhones.has(c.phone));
+              return(
+                <div>
+                  {dinaClients.length===0
+                    ? <div style={{textAlign:"center",padding:"50px 0",color:"#555",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO CLIENTS YET</div>
+                    : dinaClients.map(c=>(
+                      <div key={c.id} className="card" style={{cursor:"pointer"}} onClick={()=>setSelectedClient(c)}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:14,color:"#7ec4c9"}}>{c.name}</div>
+                            <div style={{fontSize:11,color:"#555",marginTop:3}}>📞 {c.phone||"—"} · {c.totalSessions||0} total</div>
+                          </div>
+                          <div style={{fontSize:20,color:"#333"}}>›</div>
+                        </div>
+                      </div>
+                    ))}
+                  {selectedClient&&(
+                    <div className="fade" style={{marginTop:16}}>
+                      <button className="btn-ghost" onClick={()=>setSelectedClient(null)} style={{padding:"6px 14px",fontSize:10,borderRadius:2,marginBottom:14}}>← BACK</button>
+                      <div style={{background:"#141414",border:"1px solid #222",borderLeft:"3px solid #7ec4c9",padding:16,borderRadius:2,marginBottom:14}}>
+                        <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:"#7ec4c9"}}>{selectedClient.name}</div>
+                        <div style={{fontSize:11,color:"#555",marginTop:4}}>{selectedClient.totalSessions||0} sessions</div>
+                      </div>
+                      {[["Age",selectedClient.age],["Weight",selectedClient.weight],["Height",selectedClient.height],["Goal",selectedClient.fitnessGoal],["Medical",selectedClient.medicalConditions]].filter(([,v])=>v).map(([k,v])=>(
+                        <div key={k} style={{background:"#0c0c0c",border:"1px solid #1a1a1a",padding:"10px 12px",borderRadius:2,marginBottom:6}}>
+                          <div style={{fontSize:9,color:"#555",letterSpacing:2,fontFamily:"'Cinzel',serif",marginBottom:3}}>{k.toUpperCase()}</div>
+                          <div style={{fontSize:12}}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {tView==="history"&&(()=>{
+              const dinaHistory = [...requests].filter(r=>(r.trainerId||"johan")==="dina").reverse();
+              return(
+                <div>
+                  {dinaHistory.length===0
+                    ? <div style={{textAlign:"center",padding:"50px 0",color:"#555",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO HISTORY YET</div>
+                    : dinaHistory.map(req=>(
+                      <div key={req.id} className={`card ${req.status}`}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontFamily:"'Cinzel',serif",fontSize:13,color:req.status==="approved"?"#2ecc71":req.status==="rejected"?"#c0392b":"#7ec4c9"}}>{req.name}</div>
+                            <div style={{fontSize:11,color:"#555",marginTop:2}}>{req.date} · {req.time}–{req.timeEnd}</div>
+                          </div>
+                          <div style={{fontSize:9,letterSpacing:2,fontFamily:"'Cinzel',serif",color:req.status==="approved"?"#2ecc71":req.status==="rejected"?"#c0392b":"#7ec4c9"}}>{req.status.toUpperCase()}</div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
