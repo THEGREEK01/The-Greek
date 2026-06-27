@@ -1571,7 +1571,10 @@ export default function TheGreek(){
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   <div className="sec-title">CONTACT<div className="sec-line"/></div>
-                  <FLD label="Full Name" value={editingClient.name} onChange={e=>setEditingClient(p=>({...p,name:e.target.value}))} placeholder="Full name"/>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <FLD label="Full Name" value={editingClient.name} onChange={e=>setEditingClient(p=>({...p,name:e.target.value}))} placeholder="Full name"/>
+                    <FLD label="Client Code" value={editingClient.clientCode||""} onChange={e=>setEditingClient(p=>({...p,clientCode:e.target.value.toUpperCase()}))} placeholder="e.g. TG-482A"/>
+                  </div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                     <FLD label="Phone" value={editingClient.phone} onChange={e=>setEditingClient(p=>({...p,phone:e.target.value}))} placeholder="+45..."/>
                     <FLD label="Email" value={editingClient.email} onChange={e=>setEditingClient(p=>({...p,email:e.target.value}))} placeholder="email"/>
