@@ -953,15 +953,29 @@ export default function TheGreek(){
     const updated=requests.map(r=>r.id===id?{...r,status:decision}:r);
     await saveRequests(updated);setRequests(updated);
     const req=updated.find(r=>r.id===id);
-    if(req?.email) await sendEmail(req.email, req.name, {
-      subject: decision==="approved" ? "Session Confirmed - The Greek" : "Session Request Update - The Greek",
-      message: decision==="approved"
-        ? `Your training session has been confirmed. See you there!`
-        : `Unfortunately this slot is no longer available. Please request another time.`,
-      session_date: req.date,
-      session_time: `${req.time} – ${req.timeEnd}`,
-      cancel_link: decision==="approved" ? `To cancel: reply to this email or contact your trainer.` : "",
-    });
+    // Look up the client's email from their profile (booking form no longer collects email directly)
+    const existingClients=await loadClients();
+    const matchedClient = existingClients.find(c=>
+      (req.clientCode && c.clientCode && c.clientCode.toUpperCase()===req.clientCode.toUpperCase())
+      || c.phone===req.phone
+    );
+    const clientEmail = matchedClient?.email || req.email;
+    if(clientEmail){
+      const emailResult = await sendEmail(clientEmail, req.name, {
+        subject: decision==="approved" ? "Session Confirmed - The Greek" : "Session Request Update - The Greek",
+        message: decision==="approved"
+          ? `Your training session has been confirmed. See you there!`
+          : `Unfortunately this slot is no longer available. Please request another time.`,
+        session_date: req.date,
+        session_time: `${req.time} – ${req.timeEnd}`,
+        cancel_link: decision==="approved" ? `To cancel: reply to this email or contact your trainer.` : "",
+      });
+      if(!emailResult.success){
+        alert(`${decision==="approved"?"Approved":"Declined"}, but confirmation email failed:\n${emailResult.error}`);
+      }
+    } else {
+      console.warn(`No email on file for ${req.name} (${req.phone}) — confirmation not sent.`);
+    }
     if(decision==="approved"&&req){
       await pushToGoogleCalendar(req);
       const existing=await loadClients();
