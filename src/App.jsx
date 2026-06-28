@@ -578,6 +578,12 @@ function getHours(d){return isWeekend(d)?WORKING_HOURS.weekend:WORKING_HOURS.wee
 function formatTime(d){const h=d.getHours();return `${h<10?"0"+h:h}:00`;}
 function formatDate(d){return `${DAYS_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;}
 
+function tgSortValue(code){
+  if(!code) return Infinity; // clients with no code sort to the end
+  const match = code.match(/(\d+)/);
+  return match ? parseInt(match[1], 10) : Infinity;
+}
+
 function generateSlots(date, trainerId="johan", eventsOverride=null){
   const trainer = TRAINERS.find(t=>t.id===trainerId) || TRAINERS[0];
   const hours = getTrainerSlotsForDay(trainer, date);
@@ -738,7 +744,8 @@ export default function TheGreek(){
   const [currentMonth,setCurrentMonth]=useState(new Date(today.getFullYear(),today.getMonth(),1));
   const [selectedDate,setSelectedDate]=useState(null);
   const [selectedSlot,setSelectedSlot]=useState(null);
-  const [clientForm,setClientForm]=useState({name:"",phone:""});
+  const [clientForm,setClientForm]=useState({name:"",phone:"",code:""});
+  const [codeError,setCodeError]=useState("");
   const setF=f=>e=>setClientForm(p=>({...p,[f]:e.target.value}));
   const [submitting,setSubmitting]=useState(false);
   const [cancellingId,setCancellingId]=useState(null);
@@ -889,12 +896,23 @@ export default function TheGreek(){
   }
 
   async function submitRequest(){
-    if(!clientForm.name.trim()||!clientForm.phone.trim())return;
+    if(!clientForm.name.trim()||!clientForm.phone.trim()||!clientForm.code.trim()){
+      setCodeError("Please fill in your name, phone, and client code.");
+      return;
+    }
     setSubmitting(true);
-    const req={id:Date.now().toString(),name:clientForm.name,phone:clientForm.phone,date:formatDate(selectedDate),dateISO:selectedDate.toISOString(),time:formatTime(selectedSlot.time),timeEnd:formatTime(selectedSlot.endTime),slotKey:selectedSlot.key,trainerId:selectedTrainer||"johan",status:"pending",submittedAt:new Date().toISOString()};
+    setCodeError("");
+    const allClients = await loadClients();
+    const matched = allClients.find(c=>c.clientCode&&c.clientCode.toUpperCase()===clientForm.code.trim().toUpperCase());
+    if(!matched){
+      setCodeError("Client code not recognized. Please contact your trainer to get set up, or check your code.");
+      setSubmitting(false);
+      return;
+    }
+    const req={id:Date.now().toString(),name:clientForm.name,phone:clientForm.phone,clientCode:matched.clientCode,date:formatDate(selectedDate),dateISO:selectedDate.toISOString(),time:formatTime(selectedSlot.time),timeEnd:formatTime(selectedSlot.endTime),slotKey:selectedSlot.key,trainerId:selectedTrainer||"johan",status:"pending",submittedAt:new Date().toISOString()};
     const existing=await loadRequests();
     await saveRequests([...existing,req]);
-    setClientForm({name:"",phone:""});setSelectedSlot(null);setCView("submitted");setSubmitting(false);
+    setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setCView("submitted");setSubmitting(false);
   }
 
   async function pushToGoogleCalendar(req){
@@ -1402,21 +1420,19 @@ export default function TheGreek(){
                 {(()=>{
                   const sorted = [...clients]
                     .filter(c=>!clientSearch||(c.name||"").toLowerCase().includes(clientSearch))
-                    .sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+                    .sort((a,b)=>tgSortValue(a.clientCode)-tgSortValue(b.clientCode));
                   if(sorted.length===0) return <div style={{textAlign:"center",padding:"40px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>{clients.length===0?"NO CLIENTS YET":"NO RESULTS"}</div>;
-                  let lastLetter = null;
                   return sorted.map(c=>{
-                    const letter = (c.name||"?")[0].toUpperCase();
-                    const showLetter = letter !== lastLetter;
-                    lastLetter = letter;
                     return(
                       <div key={c.id}>
-                        {showLetter&&<div style={{fontFamily:"'Cinzel',serif",fontSize:11,color:"#b89c5e",letterSpacing:3,marginTop:10,marginBottom:6,paddingBottom:4,borderBottom:"1px solid #3a332a"}}>{letter}</div>}
                         <div className="card" style={{cursor:"pointer",marginBottom:6}} onClick={()=>setSelectedClient(c)}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                             <div>
-                              <div style={{fontFamily:"'Cinzel',serif",fontSize:14,color:"#e8c66e"}}>{c.name}</div>
-                              <div style={{fontSize:11,color:"#a89878",marginTop:2}}>📞 {c.phone||"—"} · {c.totalSessions||0} total {c.clientCode&&<span style={{color:"#b89c5e",marginLeft:4}}>· {c.clientCode}</span>}</div>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                {c.clientCode&&<span style={{fontSize:10,color:"#1c1916",background:"#e8c66e",padding:"2px 8px",borderRadius:10,fontFamily:"'Cinzel',serif",letterSpacing:1,fontWeight:700}}>{c.clientCode}</span>}
+                                <div style={{fontFamily:"'Cinzel',serif",fontSize:14,color:"#e8c66e"}}>{c.name}</div>
+                              </div>
+                              <div style={{fontSize:11,color:"#a89878",marginTop:4}}>📞 {c.phone||"—"} · {c.totalSessions||0} total</div>
                               <div style={{display:"flex",gap:8,marginTop:4}}>
                                 <span style={{fontSize:10,background:"#3a332a",border:"1px solid #4a4135",padding:"2px 8px",borderRadius:10,color:"#e8c66e",fontFamily:"'Cinzel',serif",letterSpacing:1}}>W: {countSessions(c.trainingHistory,getWeekRange().mon,getWeekRange().sun)}</span>
                                 <span style={{fontSize:10,background:"#3a332a",border:"1px solid #4a4135",padding:"2px 8px",borderRadius:10,color:"#e8c66e",fontFamily:"'Cinzel',serif",letterSpacing:1}}>M: {countSessions(c.trainingHistory,getMonthRange().start,getMonthRange().end)}</span>
@@ -1435,7 +1451,7 @@ export default function TheGreek(){
             {tView==="clients"&&selectedClient&&!editingClient&&(
               <div className="fade">
                 {(()=>{
-                  const sorted=[...clients].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+                  const sorted=[...clients].sort((a,b)=>tgSortValue(a.clientCode)-tgSortValue(b.clientCode));
                   const idx=sorted.findIndex(c=>c.id===selectedClient.id);
                   const prev=idx>0?sorted[idx-1]:null;
                   const next=idx<sorted.length-1?sorted[idx+1]:null;
@@ -2025,13 +2041,19 @@ export default function TheGreek(){
                   <div style={{fontSize:11,color:"#a89878",marginTop:4}}>{formatDate(selectedDate)}</div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  <FLD label="CLIENT CODE *" value={clientForm.code} onChange={e=>{setF("code")(e);setCodeError("");}} placeholder="e.g. TG-01"/>
                   <FLD label="FULL NAME *" value={clientForm.name} onChange={setF("name")} placeholder="Your full name"/>
                   <FLD label="PHONE NUMBER *" value={clientForm.phone} onChange={setF("phone")} placeholder="+45 12 34 56 78"/>
+                  {codeError&&(
+                    <div style={{fontSize:11,color:"#e74c3c",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.3)",padding:"10px 12px",borderRadius:2}}>
+                      {codeError}
+                    </div>
+                  )}
                   <div style={{fontSize:10,color:"#6a5d48",letterSpacing:1,display:"flex",gap:6,alignItems:"center"}}>
-                    <span style={{color:"#b89c5e"}}>🔒</span> Your trainer will contact you to confirm
+                    <span style={{color:"#b89c5e"}}>🔒</span> Don't have a client code? Contact your trainer to get set up.
                   </div>
-                  <button className="btn-gold" onClick={submitRequest} disabled={submitting||!clientForm.name.trim()||!clientForm.phone.trim()} style={{padding:"16px",fontSize:12,borderRadius:2,marginTop:4}}>
-                    {submitting?<span className="pulse">SUBMITTING...</span>:"REQUEST SESSION →"}
+                  <button className="btn-gold" onClick={submitRequest} disabled={submitting||!clientForm.name.trim()||!clientForm.phone.trim()||!clientForm.code.trim()} style={{padding:"16px",fontSize:12,borderRadius:2,marginTop:4}}>
+                    {submitting?<span className="pulse">CHECKING...</span>:"REQUEST SESSION →"}
                   </button>
                 </div>
               </div>
