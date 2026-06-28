@@ -25,7 +25,7 @@ const TRAINERS = [
     id: "dina",
     name: "Dina",
     color: "#7ec4c9", // teal accent to distinguish from gold
-    startDate: "2026-09-01", // only active from September 1st
+    startDate: "2026-08-08", // only active from August 8th
     getHours: (date) => {
       const day = date.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
       const ranges = [];
@@ -1072,8 +1072,10 @@ export default function TheGreek(){
 
   async function saveNewClient(){
     if(!newClient.name.trim())return;
-    const c={...newClient,id:Date.now().toString(),totalSessions:0,trainingHistory:[],firstSession:"",lastSession:"",status:"active"};
-    const updated=[...clients,c];
+    const c={...newClient,id:Date.now().toString()+"-"+Math.random().toString(36).slice(2,7),totalSessions:0,trainingHistory:[],firstSession:"",lastSession:"",status:"active"};
+    // Fetch the freshest client list from Supabase directly, avoiding stale React state during rapid back-to-back adds
+    const freshExisting = await loadClients();
+    const updated=[...freshExisting,c];
     await saveClients(updated);setClients(updated);
     // Send welcome email if email and code are provided
     if(c.email&&c.clientCode){
@@ -1088,10 +1090,10 @@ export default function TheGreek(){
         cancel_link: `Booking page: ${baseUrl}`,
       });
       if(!result.success){
-        alert(`Client saved, but welcome email failed to send:\n${result.error}`);
+        alert(`Client "${c.name}" saved, but welcome email failed to send:\n${result.error}`);
       }
     } else {
-      alert("Client saved. No welcome email sent — fill in both Email and Client Code to trigger it.");
+      alert(`Client "${c.name}" saved. No welcome email sent — fill in both Email and Client Code to trigger it.`);
     }
     setNewClient({...EMPTY_CLIENT});setAddingClient(false);
   }
@@ -1831,7 +1833,11 @@ export default function TheGreek(){
                         </div>
                       ))}
 
-                      <button className="btn-gold" onClick={()=>{setPortalView(null);setCView("calendar");}}
+                      <button className="btn-gold" onClick={()=>{
+                        setPortalView(null);
+                        const activeTrainers = TRAINERS.filter(t=>trainerIsActive(t, today));
+                        setCView(activeTrainers.length>1 ? "trainerSelect" : "calendar");
+                      }}
                         style={{width:"100%",padding:"14px",fontSize:11,borderRadius:2,marginBottom:20,marginTop:4}}>
                         + BOOK NEW SESSION
                       </button>
