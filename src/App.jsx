@@ -584,6 +584,19 @@ function tgSortValue(code){
   return match ? parseInt(match[1], 10) : Infinity;
 }
 
+function countApprovedThisMonth(requests, identifier){
+  const now = new Date();
+  const month = now.getMonth(), year = now.getFullYear();
+  return requests.filter(r=>{
+    if(r.status!=="approved") return false;
+    const matches = (identifier.clientCode && r.clientCode && r.clientCode.toUpperCase()===identifier.clientCode.toUpperCase())
+      || r.phone===identifier.phone;
+    if(!matches) return false;
+    const d = new Date(r.dateISO);
+    return d.getMonth()===month && d.getFullYear()===year;
+  }).length;
+}
+
 function generateSlots(date, trainerId="johan", eventsOverride=null){
   const trainer = TRAINERS.find(t=>t.id===trainerId) || TRAINERS[0];
   const hours = getTrainerSlotsForDay(trainer, date);
@@ -668,7 +681,7 @@ async function setConfig(key, value){
   } catch {}
 }
 
-const EMPTY_CLIENT = {name:"",phone:"",email:"",birthday:"",address:"",emergencyContact:"",age:"",weight:"",height:"",bodyFat:"",familyInfo:"",medicalConditions:"",injuries:"",medications:"",allergies:"",fitnessGoal:"",experienceLevel:"",trainingProgram:"",sessionsPerWeek:"",preferredTime:"",notes:"",trainingHistory:[],totalSessions:0,status:"active",clientCode:"",wantsCancelAlerts:null};
+const EMPTY_CLIENT = {name:"",phone:"",email:"",birthday:"",address:"",emergencyContact:"",age:"",weight:"",height:"",bodyFat:"",familyInfo:"",medicalConditions:"",injuries:"",medications:"",allergies:"",fitnessGoal:"",experienceLevel:"",trainingProgram:"",sessionsPerWeek:"",preferredTime:"",notes:"",trainingHistory:[],totalSessions:0,status:"active",clientCode:"",wantsCancelAlerts:null,monthlySessionLimit:""};
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Raleway:wght@300;400;500&display=swap');
@@ -908,6 +921,16 @@ export default function TheGreek(){
       setCodeError("Client code not recognized. Please contact your trainer to get set up, or check your code.");
       setSubmitting(false);
       return;
+    }
+    // Check monthly session limit, if one is set on this client
+    if(matched.monthlySessionLimit && parseInt(matched.monthlySessionLimit,10)>0){
+      const existing=await loadRequests();
+      const usedThisMonth = countApprovedThisMonth(existing, matched);
+      if(usedThisMonth >= parseInt(matched.monthlySessionLimit,10)){
+        setCodeError(`You've reached your monthly limit of ${matched.monthlySessionLimit} session${matched.monthlySessionLimit==="1"?"":"s"}. Please contact your trainer if you'd like to book more.`);
+        setSubmitting(false);
+        return;
+      }
     }
     const req={id:Date.now().toString(),name:clientForm.name,phone:clientForm.phone,clientCode:matched.clientCode,date:formatDate(selectedDate),dateISO:selectedDate.toISOString(),time:formatTime(selectedSlot.time),timeEnd:formatTime(selectedSlot.endTime),slotKey:selectedSlot.key,trainerId:selectedTrainer||"johan",status:"pending",submittedAt:new Date().toISOString()};
     const existing=await loadRequests();
@@ -1508,6 +1531,17 @@ export default function TheGreek(){
                     </div>
                   </div>
                 </div>
+                {selectedClient.monthlySessionLimit && parseInt(selectedClient.monthlySessionLimit,10)>0 && (()=>{
+                  const used = countApprovedThisMonth(requests, selectedClient);
+                  const limit = parseInt(selectedClient.monthlySessionLimit,10);
+                  const overLimit = used>=limit;
+                  return(
+                    <div style={{background:"#2c2620",border:`1px solid ${overLimit?"#c0392b":"#4a4135"}`,borderLeft:`3px solid ${overLimit?"#c0392b":"#e8c66e"}`,padding:"12px 16px",borderRadius:2,marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{fontSize:10,color:"#a89878",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>MONTHLY BOOKINGS USED</div>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:overLimit?"#e74c3c":"#e8c66e",fontWeight:700}}>{used} / {limit}</div>
+                    </div>
+                  );
+                })()}
                 {[["CONTACT",[["Phone",selectedClient.phone],["Email",selectedClient.email],["Birthday",selectedClient.birthday],["Address",selectedClient.address],["Emergency",selectedClient.emergencyContact]]],
                   ["PHYSICAL",[["Age",selectedClient.age],["Weight",selectedClient.weight],["Height",selectedClient.height],["Body Fat",selectedClient.bodyFat]]],
                   ["HEALTH",[["Medical",selectedClient.medicalConditions],["Injuries",selectedClient.injuries],["Medications",selectedClient.medications],["Allergies",selectedClient.allergies]]],
@@ -1584,6 +1618,7 @@ export default function TheGreek(){
                   <div className="sec-title">TRAINING<div className="sec-line"/></div>
                   <TXA label="Fitness Goal" value={newClient.fitnessGoal} onChange={e=>setNewClient(p=>({...p,fitnessGoal:e.target.value}))} placeholder="Goals..."/>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <FLD label="Monthly Session Limit" value={newClient.monthlySessionLimit||""} onChange={e=>setNewClient(p=>({...p,monthlySessionLimit:e.target.value.replace(/\D/g,"")}))} placeholder="e.g. 8 (blank = unlimited)"/>
                     <FLD label="Experience" value={newClient.experienceLevel} onChange={e=>setNewClient(p=>({...p,experienceLevel:e.target.value}))} placeholder="Beginner/Int/Adv"/>
                     <FLD label="Sessions/Week" value={newClient.sessionsPerWeek} onChange={e=>setNewClient(p=>({...p,sessionsPerWeek:e.target.value}))} placeholder="e.g. 3"/>
                   </div>
@@ -1634,6 +1669,7 @@ export default function TheGreek(){
                   <div className="sec-title">TRAINING<div className="sec-line"/></div>
                   <TXA label="Fitness Goal" value={editingClient.fitnessGoal} onChange={e=>setEditingClient(p=>({...p,fitnessGoal:e.target.value}))} placeholder="Goals..."/>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <FLD label="Monthly Session Limit" value={editingClient.monthlySessionLimit||""} onChange={e=>setEditingClient(p=>({...p,monthlySessionLimit:e.target.value.replace(/\D/g,"")}))} placeholder="e.g. 8 (blank = unlimited)"/>
                     <FLD label="Experience" value={editingClient.experienceLevel} onChange={e=>setEditingClient(p=>({...p,experienceLevel:e.target.value}))} placeholder="Beginner/Int/Adv"/>
                     <FLD label="Sessions/Week" value={editingClient.sessionsPerWeek} onChange={e=>setEditingClient(p=>({...p,sessionsPerWeek:e.target.value}))} placeholder="e.g. 3"/>
                   </div>
