@@ -758,6 +758,8 @@ export default function TheGreek(){
   const [selectedDate,setSelectedDate]=useState(null);
   const [selectedSlot,setSelectedSlot]=useState(null);
   const [clientForm,setClientForm]=useState({name:"",phone:"",code:""});
+const [recurring,setRecurring]=useState(false);
+const [recurWeeks,setRecurWeeks]=useState(4);
   const [codeError,setCodeError]=useState("");
   const setF=f=>e=>setClientForm(p=>({...p,[f]:e.target.value}));
   const [submitting,setSubmitting]=useState(false);
@@ -931,10 +933,34 @@ useEffect(()=>{
         return;
       }
     }
-    const req={id:Date.now().toString(),name:clientForm.name,phone:clientForm.phone,clientCode:matched.clientCode,date:formatDate(selectedDate),dateISO:selectedDate.toISOString(),time:formatTime(selectedSlot.time),timeEnd:formatTime(selectedSlot.endTime),slotKey:selectedSlot.key,trainerId:selectedTrainer||"johan",status:"pending",submittedAt:new Date().toISOString()};
-    const existing=await loadRequests();
-    await saveRequests([...existing,req]);
-    setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setCView("submitted");setSubmitting(false);
+    const weeksCount = recurring ? Math.min(Math.max(parseInt(recurWeeks,10)||1,1),12) : 1;
+const newReqs = [];
+for(let w=0; w<weeksCount; w++){
+  const occDate = new Date(selectedDate);
+  occDate.setDate(occDate.getDate() + (w*7));
+  const occStart = new Date(occDate);
+  occStart.setHours(selectedSlot.time.getHours(),0,0,0);
+  const occEnd = new Date(occDate);
+  occEnd.setHours(selectedSlot.endTime.getHours(),0,0,0);
+  newReqs.push({
+    id: Date.now().toString()+"-"+w,
+    name: clientForm.name,
+    phone: clientForm.phone,
+    clientCode: matched.clientCode,
+    date: formatDate(occDate),
+    dateISO: occStart.toISOString(),
+    time: formatTime(occStart),
+    timeEnd: formatTime(occEnd),
+    slotKey: `${selectedTrainer||"johan"}-${occStart.toISOString()}`,
+    trainerId: selectedTrainer||"johan",
+    status: "pending",
+    submittedAt: new Date().toISOString(),
+    recurringGroup: recurring ? Date.now().toString() : null,
+  });
+}
+const existing=await loadRequests();
+await saveRequests([...existing,...newReqs]);
+setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(false);setRecurWeeks(4);setCView("submitted");setSubmitting(false);
   }
 
   async function pushToGoogleCalendar(req){
