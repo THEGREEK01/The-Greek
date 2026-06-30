@@ -2124,6 +2124,13 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                   <FLD label="CLIENT CODE *" value={clientForm.code} onChange={e=>{setF("code")(e);setCodeError("");}} placeholder="e.g. TG-01"/>
                   <FLD label="FULL NAME *" value={clientForm.name} onChange={setF("name")} placeholder="Your full name"/>
                   <FLD label="PHONE NUMBER *" value={clientForm.phone} onChange={setF("phone")} placeholder="+45 12 34 56 78"/>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginTop:4}}>
+  <input type="checkbox" checked={recurring} onChange={e=>setRecurring(e.target.checked)} style={{width:18,height:18,accentColor:"#e8c66e"}}/>
+  <span style={{fontSize:12,color:"#f5eedd"}}>Repeat this session weekly</span>
+</div>
+{recurring&&(
+  <FLD label="NUMBER OF WEEKS (MAX 12)" value={String(recurWeeks)} onChange={e=>setRecurWeeks(e.target.value.replace(/\D/g,"").slice(0,2))} placeholder="e.g. 4"/>
+)}
                   {codeError&&(
                     <div style={{fontSize:11,color:"#e74c3c",background:"rgba(192,57,43,0.1)",border:"1px solid rgba(192,57,43,0.3)",padding:"10px 12px",borderRadius:2}}>
                       {codeError}
