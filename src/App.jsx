@@ -25,7 +25,7 @@ const TRAINERS = [
     id: "dina",
     name: "Dina",
     color: "#7ec4c9", // teal accent to distinguish from gold
-    startDate: "2026-08-08", // only active from August 8th
+    startDate: "2026-08-04", // only active from August 4th
     getHours: (date) => {
       const day = date.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
       const ranges = [];
