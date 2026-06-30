@@ -1191,8 +1191,7 @@ useEffect(()=>{
         </div>
         <button onClick={()=>["trainer","assistant","dina","dinaSetPin","pinEntry"].includes(appMode)?(setAppMode("client"),setCView("calendar"),setSelectedClient(null),setEditingClient(null)):setAppMode("pinEntry")}
           style={{background:"none",border:"1px solid #4a4135",color:["trainer","assistant","dina","dinaSetPin"].includes(appMode)?"#e8c66e":"#8a7a5e",fontSize:9,fontFamily:"'Cinzel',serif",letterSpacing:2,padding:"7px 12px",cursor:"pointer",borderRadius:2,position:"relative"}}>
-          {["trainer","assistant","dina","dinaSetPin"].includes(appMode)?"← EXIT":"TRAINER"}
-          {pendingCount>0&&appMode==="client"&&<span style={{position:"absolute",top:-6,right:-6,background:"#c0392b",color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:9,display:"flex",alignItems:"center",justifyContent:"center"}}>{pendingCount}</span>}
+         {["trainer","assistant","dina","dinaSetPin","pinEntry"].includes(appMode)?"← EXIT":"TRAINER"}          {pendingCount>0&&appMode==="client"&&<span style={{position:"absolute",top:-6,right:-6,background:"#c0392b",color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:9,display:"flex",alignItems:"center",justifyContent:"center"}}>{pendingCount}</span>}
         </button>
       </div>
 
