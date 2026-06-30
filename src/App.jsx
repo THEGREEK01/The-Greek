@@ -794,12 +794,11 @@ export default function TheGreek(){
   },[]);
 
   // If multiple trainers are active, show picker on first load
-  useEffect(()=>{
-    const activeTrainers = TRAINERS.filter(t=>trainerIsActive(t, today));
-    if(activeTrainers.length>1 && cView==="calendar" && !selectedDate){
-      setCView("trainerSelect");
-    }
-  },[]);
+useEffect(()=>{
+  if(TRAINERS.length>1 && cView==="calendar" && !selectedDate){
+    setCView("trainerSelect");
+  }
+},[]);
 
   // Fetch live Google Calendar events on load (falls back to static BOOKED_EVENTS if unavailable)
   useEffect(()=>{
