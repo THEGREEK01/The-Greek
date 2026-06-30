@@ -1946,7 +1946,7 @@ export default function TheGreek(){
                     <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#a89878",letterSpacing:3}}>
                       BOOK WITH {(TRAINERS.find(t=>t.id===selectedTrainer)||TRAINERS[0]).name.toUpperCase()}
                     </div>
-                    {TRAINERS.filter(t=>trainerIsActive(t,today)).length>1&&(
+                    {TRAINERS.filter(t=>trainerIsActive(t,selectedDate||today)).length>1&&(
                       <button className="btn-ghost" onClick={()=>setCView("trainerSelect")} style={{padding:"4px 10px",fontSize:9,borderRadius:2}}>CHANGE</button>
                     )}
                   </div>
