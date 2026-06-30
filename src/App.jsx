@@ -1917,7 +1917,7 @@ useEffect(()=>{
                   <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#a89878",letterSpacing:3,marginBottom:8}}>CHOOSE YOUR TRAINER</div>
                   <div className="divider"/>
                 </div>
-                {{TRAINERS.map(t=>(
+                {TRAINERS.map(t=>(
                   <button key={t.id} onClick={()=>{setSelectedTrainer(t.id);setCView("calendar");}}
                     style={{width:"100%",background:"#2c2620",border:`1px solid ${t.color}40`,borderLeft:`3px solid ${t.color}`,padding:"18px 20px",marginBottom:10,borderRadius:2,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s"}}>
                     <div>
