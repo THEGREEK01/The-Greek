@@ -167,7 +167,7 @@ function countApprovedThisMonth(requests, identifier){
 function generateSlots(date, trainerId="johan", eventsOverride=null){
   const trainer = TRAINERS.find(t=>t.id===trainerId) || TRAINERS[0];
   const hours = getTrainerSlotsForDay(trainer, date);
-  const eventsToCheck = eventsOverride || BOOKED_EVENTS;
+  const eventsToCheck = eventsOverride || [];
   const slots = [];
   for(const h of hours){
     const s=new Date(date);s.setHours(h,0,0,0);
@@ -371,7 +371,7 @@ useEffect(()=>{
   }
 },[]);
 
-  // Fetch live Google Calendar events on load (falls back to static BOOKED_EVENTS if unavailable)
+  // Fetch live Google Calendar events on load (falls back to static [] if unavailable)
   useEffect(()=>{
     (async()=>{
       try{
@@ -384,7 +384,7 @@ useEffect(()=>{
           setCalendarConnected(true);
           setLiveEvents(data.events);
         } else {
-          setLiveEvents(BOOKED_EVENTS);
+          setLiveEvents([]);
         }
       }catch{
         setLiveEvents([]);
@@ -995,7 +995,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                   ))}
                 </div>
                 {(()=>{
-                  const sessions = getUpcomingSessions(requests, liveEvents||BOOKED_EVENTS, upcomingRange==="week"?7:30);
+                  const sessions = getUpcomingSessions(requests, liveEvents||[], upcomingRange==="week"?7:30);
                   if(sessions.length===0) return <div style={{textAlign:"center",padding:"50px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO UPCOMING SESSIONS</div>;
                   let lastDate = null;
                   return sessions.map((s,i)=>{
