@@ -784,6 +784,7 @@ const [recurWeeks,setRecurWeeks]=useState(4);
   const [newClient,setNewClient]=useState({...EMPTY_CLIENT});
 
   useEffect(()=>{if(appMode==="trainer"||appMode==="dina"){loadRequests().then(setRequests);loadClients().then(setClients);}},[appMode]);
+useEffect(()=>{if(portalView==="portal"){loadRequests().then(setRequests);}},[portalView]);
 
   // Load Dina's current PIN and change-status on app start
   useEffect(()=>{
@@ -932,7 +933,25 @@ useEffect(()=>{
         setSubmitting(false);
         return;
       }
-    }
+    }const existingForConflict = await loadRequests();
+const slotStart = selectedSlot.time.getTime();
+const slotEnd = selectedSlot.endTime.getTime();
+const hasConflict = existingForConflict.some(r=>{
+  if(r.status!=="pending" && r.status!=="approved") return false;
+  const sameClient = (r.clientCode && matched.clientCode && r.clientCode.toUpperCase()===matched.clientCode.toUpperCase());
+  if(!sameClient) return false;
+  const rStart = new Date(r.dateISO).getTime();
+  const rDateOnly = new Date(r.dateISO); rDateOnly.setHours(0,0,0,0);
+  const selDateOnly = new Date(selectedDate); selDateOnly.setHours(0,0,0,0);
+  if(rDateOnly.getTime()!==selDateOnly.getTime()) return false;
+  const rEnd = rStart + (60*60*1000); // sessions are fixed 1hr in this app
+  return rStart<slotEnd && rEnd>slotStart;
+});
+if(hasConflict){
+  setCodeError("You already have a session booked at this time with another trainer. Please choose a different time.");
+  setSubmitting(false);
+  return;
+}
     const weeksCount = recurring ? Math.min(Math.max(parseInt(recurWeeks,10)||1,1),12) : 1;
 const newReqs = [];
 for(let w=0; w<weeksCount; w++){
@@ -1850,7 +1869,17 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                   <div style={{fontFamily:"'Cinzel',serif",fontSize:18,color:"#e8c66e",fontWeight:700}}>
                     Welcome, {portalClient.name.split(" ")[0]}
                   </div>
-                  <div style={{fontSize:10,color:"#a89878",marginTop:4,letterSpacing:2}}>CLIENT CODE: {portalClient.clientCode}</div>
+                  <div style={{fontSize:10,color:"#a89878",marginTop:4,letterSpacing:2}}>CLIENT CODE: {portalClient.clientCode}</div>{portalClient.monthlySessionLimit && parseInt(portalClient.monthlySessionLimit,10)>0 && (()=>{
+  const used = countApprovedThisMonth(requests.length?requests:[], portalClient);
+  const limit = parseInt(portalClient.monthlySessionLimit,10);
+  const remaining = Math.max(limit-used,0);
+  return(
+    <div style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:`3px solid ${remaining===0?"#c0392b":"#e8c66e"}`,padding:"12px 16px",borderRadius:2,marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{fontSize:10,color:"#a89878",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>SESSIONS USED THIS MONTH</div>
+      <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:remaining===0?"#e74c3c":"#e8c66e",fontWeight:700}}>{used} / {limit}</div>
+    </div>
+  );
+})()}
                 </div>
 
                 {(()=>{
