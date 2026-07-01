@@ -768,6 +768,7 @@ const [recurWeeks,setRecurWeeks]=useState(4);
   const [portalCode,setPortalCode]=useState("");
   const [portalClient,setPortalClient]=useState(null);
   const [portalError,setPortalError]=useState(false);
+  const [portalTab,setPortalTab]=useState("upcoming");
   const [clientSearch,setClientSearch]=useState("");
   const [upcomingRange,setUpcomingRange]=useState("week");
   const [liveEvents,setLiveEvents]=useState(null); // null = not loaded yet, array = loaded
@@ -1076,6 +1077,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
       setPortalView("portal");
       setPortalError(false);
       setPortalCode("");
+      setPortalTab("upcoming");
     } else {
       setPortalError(true);
       setTimeout(()=>setPortalError(false), 2000);
@@ -1898,23 +1900,63 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                   const now = new Date(); now.setHours(0,0,0,0);
                   const upcoming = merged.filter(r=>new Date(r.dateISO)>=now).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
                   const past = merged.filter(r=>new Date(r.dateISO)<now).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
-                  return(
-                    <div>
-                      <div className="sec-title">UPCOMING SESSIONS<div className="sec-line"/></div>
-                      {upcoming.length===0
-                        ?<div style={{fontSize:11,color:"#a89878",textAlign:"center",padding:"16px 0",marginBottom:16}}>No upcoming sessions</div>
-                        :upcoming.map(r=>(
-                        <div key={r.id} style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:"3px solid #2ecc71",padding:"12px 14px",borderRadius:2,marginBottom:8}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <div>
-                              <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#f5eedd"}}>{r.date}</div>
-                              <div style={{fontSize:12,color:"#2ecc71",marginTop:2}}>{r.time} – {r.timeEnd}</div>
-                            </div>
-                            {r.source==="request"
-                              ? <button className="btn-red" onClick={()=>{
-                                  if(window.confirm(`Cancel your session on ${r.date} at ${r.time}?`)){
-                                    handleClientCancel(r.id);
-                                  }
+                 return(
+  <div>
+    <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #4a4135",borderRadius:2,overflow:"hidden"}}>
+      {[["upcoming","UPCOMING"],["past","PAST"]].map(([v,label])=>(
+        <button key={v} onClick={()=>setPortalTab(v)}
+          style={{flex:1,padding:"9px",background:portalTab===v?"#e8c66e":"transparent",color:portalTab===v?"#1c1916":"#a89878",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
+          {label} {v==="upcoming"?`(${upcoming.length})`:`(${past.length})`}
+        </button>
+      ))}
+    </div>
+
+    {portalTab==="upcoming"&&(
+      <div>
+        {upcoming.length===0
+          ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO UPCOMING SESSIONS</div>
+          :upcoming.map(r=>(
+          <div key={r.id} style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:"3px solid #2ecc71",padding:"12px 14px",borderRadius:2,marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#f5eedd"}}>{r.date}</div>
+                <div style={{fontSize:12,color:"#2ecc71",marginTop:2}}>{r.time} – {r.timeEnd}</div>
+              </div>
+              {r.source==="request"
+                ?<button className="btn-red" onClick={()=>{
+                    if(window.confirm(`Cancel your session on ${r.date} at ${r.time}?`)){
+                      handleClientCancel(r.id);
+                    }
+                  }} style={{padding:"8px 14px",fontSize:10,borderRadius:2}}>CANCEL</button>
+                :<span style={{fontSize:9,color:"#a89878",letterSpacing:1}}>SCHEDULED</span>
+              }
+            </div>
+          </div>
+        ))}
+        <button className="btn-gold" onClick={()=>{
+          setPortalView(null);
+          const activeTrainers = TRAINERS.filter(t=>trainerIsActive(t,today));
+          setCView(activeTrainers.length>1?"trainerSelect":"calendar");
+        }} style={{width:"100%",padding:"14px",fontSize:11,borderRadius:2,marginTop:8}}>
+          + BOOK NEW SESSION
+        </button>
+      </div>
+    )}
+
+    {portalTab==="past"&&(
+      <div>
+        {past.length===0
+          ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO PAST SESSIONS</div>
+          :past.map(r=>(
+          <div key={r.id} style={{background:"#221e18",border:"1px solid #3a332a",borderLeft:"3px solid #4a4135",padding:"12px 14px",borderRadius:2,marginBottom:6}}>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#a89878"}}>{r.date}</div>
+            <div style={{fontSize:12,color:"#6a5d48",marginTop:2}}>{r.time} – {r.timeEnd}</div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);                                  }
                                 }} style={{padding:"8px 14px",fontSize:10,borderRadius:2}}>CANCEL</button>
                               : <span style={{fontSize:9,color:"#a89878",letterSpacing:1}}>SCHEDULED</span>
                             }
