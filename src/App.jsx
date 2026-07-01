@@ -104,6 +104,7 @@ function getClientCalendarSessions(clientName, daysAhead=120, eventsOverride=nul
   const fullName = clientName.trim().toLowerCase();
   const now = new Date(); now.setHours(0,0,0,0);
   const end = new Date(now); end.setDate(now.getDate()+daysAhead);
+  const farPast = new Date(now); farPast.setFullYear(farPast.getFullYear()-1);
   const eventsToCheck = eventsOverride || liveEvents || [];
   return eventsToCheck
     .filter(ev => {
@@ -113,7 +114,7 @@ function getClientCalendarSessions(clientName, daysAhead=120, eventsOverride=nul
      const firstName = fullName.split(" ")[0];
 if(!title.toLowerCase().includes(firstName)) return false;
       const s = new Date(ev.start);
-      const farPast = new Date(now); farPast.setFullYear(farPast.getFullYear()-1);
+     
 return s >= farPast && s <= end;
     })
     .map(ev => {
