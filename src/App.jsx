@@ -104,7 +104,7 @@ function getClientCalendarSessions(clientName, daysAhead=120, eventsOverride=nul
   const fullName = clientName.trim().toLowerCase();
   const now = new Date(); now.setHours(0,0,0,0);
   const end = new Date(now); end.setDate(now.getDate()+daysAhead);
-  const eventsToCheck = eventsOverride || [];
+  const eventsToCheck = eventsOverride || liveEvents || [];
   return eventsToCheck
     .filter(ev => {
       if(!ev.title) return false;
