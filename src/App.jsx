@@ -1494,12 +1494,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                     if(window.confirm(`Cancel your session on ${r.date} at ${r.time}?`)){
                       handleClientCancel(r.id);
                     }
-                  }} style={{padding:"8px 14px",fontSize:10,borderRadius:2}}>CANCEL</button>
-                :<span style={{fontSize:9,color:"#a89878",letterSpacing:1}}>SCHEDULED</span>
-              }
-            </div>
-          </div>
-        ))}
+                 
         <button className="btn-gold" onClick={()=>{
           setPortalView(null);
           const activeTrainers = TRAINERS.filter(t=>trainerIsActive(t,today));
@@ -1524,12 +1519,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
     )}
   </div>
 );                                  }
-                                }} style={{padding:"8px 14px",fontSize:10,borderRadius:2}}>CANCEL</button>
-                              : <span style={{fontSize:9,color:"#a89878",letterSpacing:1}}>SCHEDULED</span>
-                            }
-                          </div>
-                        </div>
-                      ))}
+                                
 
                       <button className="btn-gold" onClick={()=>{
                         setPortalView(null);
