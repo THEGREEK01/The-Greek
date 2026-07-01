@@ -111,7 +111,7 @@ function getClientCalendarSessions(clientName, daysAhead=120, eventsOverride=nul
       const title = ev.title.trim().toLowerCase();
       // Exact full-name match only (avoids collisions like "Martin" vs "Martin Sok")
      const firstName = fullName.split(" ")[0];
-if(!title.includes(firstName)) return false;
+if(!title.toLowerCase().includes(firstName)) return false;
       const s = new Date(ev.start);
       const farPast = new Date(now); farPast.setFullYear(farPast.getFullYear()-1);
 return s >= farPast && s <= end;
