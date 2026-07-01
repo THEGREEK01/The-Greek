@@ -351,7 +351,7 @@ const [recurWeeks,setRecurWeeks]=useState(4);
   const [newClient,setNewClient]=useState({...EMPTY_CLIENT});
 
   useEffect(()=>{if(appMode==="trainer"||appMode==="dina"){loadRequests().then(setRequests);loadClients().then(setClients);}},[appMode]);
-useEffect(()=>{if(portalView==="portal"){loadRequests().then(setRequests);}},[portalView]);
+useEffect(()=>{if(portalView==="portal"){loadRequests().then(setRequests);}},[portalView,liveEvents]);
 
   // Load Dina's current PIN and change-status on app start
   useEffect(()=>{
