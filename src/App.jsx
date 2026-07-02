@@ -366,10 +366,10 @@ useEffect(()=>{if(portalView==="portal"){loadRequests().then(setRequests);}},[po
 
   // If multiple trainers are active, show picker on first load
 useEffect(()=>{
-  if(TRAINERS.length>1 && cView==="calendar" && !selectedDate){
+  if (TRAINERS.length>1 && cView==="calendar" && !selectedDate && portalView!=="login"){
     setCView("trainerSelect");
   }
-},[]);
+},[portalView]);
 
   // Fetch live Google Calendar events on load (falls back to static [] if unavailable)
   useEffect(()=>{
