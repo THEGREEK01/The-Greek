@@ -1549,7 +1549,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
               </div>
             )}
 
-            {cView==="calendar"&&(
+            {cView==="calendar"&&!portalView&&(
               <div className="fade">
                 <div style={{marginBottom:18}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
