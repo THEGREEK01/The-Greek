@@ -331,7 +331,7 @@ const [recurWeeks,setRecurWeeks]=useState(4);
   const setF=f=>e=>setClientForm(p=>({...p,[f]:e.target.value}));
   const [submitting,setSubmitting]=useState(false);
   const [cancellingId,setCancellingId]=useState(null);
-  const [portalView,setPortalView]=useState(null); // null | "login" | "portal"
+  const [portalView,setPortalView]=useState("login"); // null | "login" | "portal"
   const [portalCode,setPortalCode]=useState("");
   const [portalClient,setPortalClient]=useState(null);
   const [portalError,setPortalError]=useState(false);
