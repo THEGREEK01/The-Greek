@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken();
     const calendarId = process.env.GOOGLE_CALENDAR_ID || "primary";
 
-    const timeMin = new Date().toISOString();
+    const timeMin = new Date(Date.now() - 1000 * 60 * 60 * 24 * 365).toISOString();
     const timeMax = new Date(Date.now() + 1000 * 60 * 60 * 24 * 120).toISOString();
 
     let allEvents = [];
