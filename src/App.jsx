@@ -1431,6 +1431,171 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
             )}
 
             {portalView==="portal"&&portalClient&&(
+  <div className="fade">
+    <button className="btn-ghost" onClick={()=>{setPortalView(null);setPortalClient(null);}}
+      style={{padding:"6px 14px",fontSize:10,borderRadius:2,marginBottom:20}}>← BACK</button>
+    <div style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:"3px solid #e8c66e",padding:16,borderRadius:2,marginBottom:16}}>
+      <div style={{fontFamily:"'Cinzel',serif",fontSize:18,color:"#e8c66e",fontWeight:700}}>
+        Welcome, {portalClient.name.split(" ")[0]}
+      </div>
+      <div style={{fontSize:10,color:"#a89878",marginTop:4,letterSpacing:2}}>CLIENT CODE: {portalClient.clientCode}</div>
+    </div>
+    {portalClient.monthlySessionLimit && parseInt(portalClient.monthlySessionLimit,10)>0 && (()=>{
+      const used = countApprovedThisMonth(requests, portalClient);
+      const limit = parseInt(portalClient.monthlySessionLimit,10);
+      const remaining = Math.max(limit-used,0);
+      return(
+        <div style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:`3px solid ${remaining===0?"#c0392b":"#e8c66e"}`,padding:"12px 16px",borderRadius:2,marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:10,color:"#a89878",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>SESSIONS USED THIS MONTH</div>
+          <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:remaining===0?"#e74c3c":"#e8c66e",fontWeight:700}}>{used} / {limit}</div>
+        </div>
+      );
+    })()}
+    <div style={{display:"flex",gap:0,marginBottom:20,border:"1px solid #4a4135",borderRadius:2,overflow:"hidden"}}>
+      {[["book","BOOK"],["sessions","MY SESSIONS"]].map(([v,label])=>(
+        <button key={v} onClick={()=>setPortalTab(v)}
+          style={{flex:1,padding:"11px",background:portalTab===v?"#e8c66e":"transparent",color:portalTab===v?"#1c1916":"#a89878",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
+          {label}
+        </button>
+      ))}
+    </div>
+    {portalTab==="book"&&(
+      <div className="fade">
+        <div style={{marginBottom:18}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:10,color:"#a89878",letterSpacing:3}}>
+              BOOK WITH {(TRAINERS.find(t=>t.id===selectedTrainer)||TRAINERS[0]).name.toUpperCase()}
+            </div>
+            {TRAINERS.filter(t=>trainerIsActive(t,selectedDate||today)).length>1&&(
+              <button className="btn-ghost" onClick={()=>setSelectedTrainer(selectedTrainer==="johan"?"dina":"johan")} style={{padding:"4px 10px",fontSize:9,borderRadius:2}}>CHANGE</button>
+            )}
+          </div>
+          <div className="divider"/>
+        </div>
+        <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #4a4135",borderRadius:2,overflow:"hidden"}}>
+          {["month","week"].map(v=>(
+            <button key={v} onClick={()=>setCalViewMode(v)}
+              style={{flex:1,padding:"9px",background:calViewMode===v?"#e8c66e":"transparent",color:calViewMode===v?"#1c1916":"#a89878",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
+              {v}
+            </button>
+          ))}
+        </div>
+        {calViewMode==="month"&&(
+          <>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <button className="btn-ghost" onClick={()=>setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()-1,1))} style={{padding:"10px 20px",fontSize:18,borderRadius:2}}>←</button>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:22,letterSpacing:4,color:"#e8c66e"}}>{MONTHS[currentMonth.getMonth()].toUpperCase()} {currentMonth.getFullYear()}</div>
+            <button className="btn-ghost" onClick={()=>setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1,1))} style={{padding:"10px 20px",fontSize:18,borderRadius:2}}>→</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8,marginBottom:10}}>
+            {DAYS.map(d=><div key={d} style={{textAlign:"center",fontSize:12,color:"#8a7a5e",letterSpacing:1.5,padding:"6px 0",fontFamily:"'Cinzel',serif"}}>{d}</div>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8}}>
+            {buildCalendarDays().map((date,i)=>{
+              if(!date)return <div key={i}/>;
+              const past=date<today,sel=selectedDate&&date.toDateString()===selectedDate.toDateString(),isToday=date.toDateString()===today.toDateString(),wknd=isWeekend(date);
+              return <button key={i} onClick={()=>{if(!past){setSelectedDate(date);setSelectedSlot(null);setCView("slots");}}} className={`cal-cell${past?" past":""}${sel?" selected":""}${isToday?" today":""}${!sel&&wknd&&!past?" weekend":""}`}>{date.getDate()}</button>;
+            })}
+          </div>
+          </>
+        )}
+        {calViewMode==="week"&&(
+          <>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <button className="btn-ghost" onClick={()=>{const d=new Date(weekStartDate);d.setDate(d.getDate()-7);setWeekStartDate(d);}} style={{padding:"6px 14px",fontSize:14,borderRadius:2}}>←</button>
+            <div style={{fontFamily:"'Cinzel',serif",fontSize:13,letterSpacing:2,color:"#e8c66e",textAlign:"center"}}>
+              {(()=>{const wd=buildWeekDays();const first=wd[0],last=wd[6];const sameMonth=first.getMonth()===last.getMonth();return sameMonth?`${first.getDate()}–${last.getDate()} ${MONTHS[first.getMonth()].toUpperCase()}`:`${first.getDate()} ${MONTHS[first.getMonth()].slice(0,3).toUpperCase()} – ${last.getDate()} ${MONTHS[last.getMonth()].slice(0,3).toUpperCase()}`;})()}
+            </div>
+            <button className="btn-ghost" onClick={()=>{const d=new Date(weekStartDate);d.setDate(d.getDate()+7);setWeekStartDate(d);}} style={{padding:"6px 14px",fontSize:14,borderRadius:2}}>→</button>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {buildWeekDays().map((date,i)=>{
+              const past=date<today;
+              const isToday=date.toDateString()===today.toDateString();
+              const stats=getDaySlotStats(date,selectedTrainer||"johan");
+              const noSlots=stats.total===0;
+              return(
+                <button key={i} disabled={past||noSlots} onClick={()=>{setSelectedDate(date);setSelectedSlot(null);setCView("slots");}}
+                  style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:isToday?"#3a332a":"#221e18",border:`1px solid ${isToday?"#b89c5e":"#3a332a"}`,borderRadius:2,padding:"12px 16px",cursor:(past||noSlots)?"default":"pointer",opacity:(past||noSlots)?0.35:1,transition:"all 0.15s"}}>
+                  <div style={{textAlign:"left"}}>
+                    <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#f5eedd",letterSpacing:1}}>{DAYS_FULL[date.getDay()].toUpperCase()}</div>
+                    <div style={{fontSize:10,color:"#a89878",marginTop:2}}>{date.getDate()} {MONTHS[date.getMonth()].slice(0,3).toUpperCase()}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    {noSlots?<div style={{fontSize:10,color:"#8a7a5e",letterSpacing:1}}>NOT WORKING</div>:<>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:13,color:stats.available>0?"#2ecc71":"#c0392b"}}>{stats.available} OPEN</div>
+                      <div style={{fontSize:9,color:"#a89878",marginTop:2}}>{stats.booked}/{stats.total} booked</div>
+                    </>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          </>
+        )}
+      </div>
+    )}
+    {portalTab==="sessions"&&(()=>{
+      const myReqs = requests.filter(r=>r.phone===portalClient.phone&&r.status==="approved")
+        .map(r=>({dateISO:r.dateISO,date:r.date,time:r.time,timeEnd:r.timeEnd,source:"request",id:r.id}));
+      const calSessions = liveEvents ? getClientCalendarSessions(portalClient.name, 120, liveEvents).map((s,i)=>({...s,id:`cal-${i}`})) : [];
+      const seen = new Set();
+      const merged = [...myReqs, ...calSessions].filter(s=>{
+        const key = `${s.date}|${s.time}`;
+        if(seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const now = new Date(); now.setHours(0,0,0,0);
+      const upcoming = merged.filter(r=>new Date(r.dateISO)>=now).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
+      const past = merged.filter(r=>new Date(r.dateISO)<now).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
+      return(
+        <div className="fade">
+          <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #4a4135",borderRadius:2,overflow:"hidden"}}>
+            {[["upcoming","UPCOMING"],["past","PAST"]].map(([v,label])=>(
+              <button key={v} onClick={()=>setPortalTab(v==="upcoming"?"sessions_upcoming":"sessions_past")}
+                style={{flex:1,padding:"9px",background:(portalTab==="sessions_upcoming"&&v==="upcoming")||(portalTab==="sessions_past"&&v==="past")||(portalTab==="sessions"&&v==="upcoming")?"#e8c66e":"transparent",color:(portalTab==="sessions_upcoming"&&v==="upcoming")||(portalTab==="sessions_past"&&v==="past")||(portalTab==="sessions"&&v==="upcoming")?"#1c1916":"#a89878",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
+                {label} ({v==="upcoming"?upcoming.length:past.length})
+              </button>
+            ))}
+          </div>
+          {(portalTab==="sessions"||portalTab==="sessions_upcoming")&&(
+            <div>
+              {upcoming.length===0
+                ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO UPCOMING SESSIONS</div>
+                :upcoming.map(r=>(
+                <div key={r.id} style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:"3px solid #2ecc71",padding:"12px 14px",borderRadius:2,marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#f5eedd"}}>{r.date}</div>
+                      <div style={{fontSize:12,color:"#2ecc71",marginTop:2}}>{r.time} – {r.timeEnd}</div>
+                    </div>
+                    {r.source==="request"
+                      ?<button className="btn-red" onClick={()=>{if(window.confirm(`Cancel your session on ${r.date} at ${r.time}?`)){handleClientCancel(r.id);}}} style={{padding:"8px 14px",fontSize:10,borderRadius:2}}>CANCEL</button>
+                      :<span style={{fontSize:9,color:"#a89878",letterSpacing:1}}>SCHEDULED</span>
+                    }
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {portalTab==="sessions_past"&&(
+            <div>
+              {past.length===0
+                ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO PAST SESSIONS</div>
+                :past.map(r=>(
+                <div key={r.id} style={{background:"#221e18",border:"1px solid #3a332a",borderLeft:"3px solid #4a4135",padding:"12px 14px",borderRadius:2,marginBottom:6}}>
+                  <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#a89878"}}>{r.date}</div>
+                  <div style={{fontSize:12,color:"#6a5d48",marginTop:2}}>{r.time} – {r.timeEnd}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    })()}
+  </div>
+)}
               <div className="fade">
                 <button className="btn-ghost" onClick={()=>{setPortalView(null);setPortalClient(null);}}
                   style={{padding:"6px 14px",fontSize:10,borderRadius:2,marginBottom:20}}>← BACK</button>
