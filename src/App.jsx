@@ -1438,25 +1438,23 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                   <div style={{fontFamily:"'Cinzel',serif",fontSize:18,color:"#e8c66e",fontWeight:700}}>
                     Welcome, {portalClient.name.split(" ")[0]}
                   </div>
-                  <div style={{fontSize:10,color:"#a89878",marginTop:4,letterSpacing:2}}>CLIENT CODE: {portalClient.clientCode}</div>{portalClient.monthlySessionLimit && parseInt(portalClient.monthlySessionLimit,10)>0 && (()=>{
-  const used = countApprovedThisMonth(requests.length?requests:[], portalClient);
-  const limit = parseInt(portalClient.monthlySessionLimit,10);
-  const remaining = Math.max(limit-used,0);
-  return(
-    <div style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:`3px solid ${remaining===0?"#c0392b":"#e8c66e"}`,padding:"12px 16px",borderRadius:2,marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      <div style={{fontSize:10,color:"#a89878",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>SESSIONS USED THIS MONTH</div>
-      <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:remaining===0?"#e74c3c":"#e8c66e",fontWeight:700}}>{used} / {limit}</div>
-    </div>
-  );
-})()}
+                  <div style={{fontSize:10,color:"#a89878",marginTop:4,letterSpacing:2}}>CLIENT CODE: {portalClient.clientCode}</div>
                 </div>
-
+                {portalClient.monthlySessionLimit && parseInt(portalClient.monthlySessionLimit,10)>0 && (()=>{
+                  const used = countApprovedThisMonth(requests, portalClient);
+                  const limit = parseInt(portalClient.monthlySessionLimit,10);
+                  const remaining = Math.max(limit-used,0);
+                  return(
+                    <div style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:`3px solid ${remaining===0?"#c0392b":"#e8c66e"}`,padding:"12px 16px",borderRadius:2,marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{fontSize:10,color:"#a89878",letterSpacing:1,fontFamily:"'Cinzel',serif"}}>SESSIONS USED THIS MONTH</div>
+                      <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:remaining===0?"#e74c3c":"#e8c66e",fontWeight:700}}>{used} / {limit}</div>
+                    </div>
+                  );
+                })()}
                 {(()=>{
                   const myReqs = requests.filter(r=>r.phone===portalClient.phone&&r.status==="approved")
                     .map(r=>({dateISO:r.dateISO,date:r.date,time:r.time,timeEnd:r.timeEnd,source:"request",id:r.id}));
-                  const calSessions = getClientCalendarSessions(portalClient.name, 120, liveEvents)
-                    .map((s,i)=>({...s,id:`cal-${i}`}));
-                  // Merge, dedupe by date+time (in case a calendar event was also booked through the app)
+                  const calSessions = liveEvents ? getClientCalendarSessions(portalClient.name, 120, liveEvents).map((s,i)=>({...s,id:`cal-${i}`})) : [];
                   const seen = new Set();
                   const merged = [...myReqs, ...calSessions].filter(s=>{
                     const key = `${s.date}|${s.time}`;
@@ -1467,79 +1465,52 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                   const now = new Date(); now.setHours(0,0,0,0);
                   const upcoming = merged.filter(r=>new Date(r.dateISO)>=now).sort((a,b)=>new Date(a.dateISO)-new Date(b.dateISO));
                   const past = merged.filter(r=>new Date(r.dateISO)<now).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
-                 return(
-  <div>
-    <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #4a4135",borderRadius:2,overflow:"hidden"}}>
-      {[["upcoming","UPCOMING"],["past","PAST"]].map(([v,label])=>(
-        <button key={v} onClick={()=>setPortalTab(v)}
-          style={{flex:1,padding:"9px",background:portalTab===v?"#e8c66e":"transparent",color:portalTab===v?"#1c1916":"#a89878",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
-          {label} {v==="upcoming"?`(${upcoming.length})`:`(${past.length})`}
-        </button>
-      ))}
-    </div>
-
-    {portalTab==="upcoming"&&(
-      <div>
-        {upcoming.length===0
-          ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO UPCOMING SESSIONS</div>
-          :upcoming.map(r=>(
-          <div key={r.id} style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:"3px solid #2ecc71",padding:"12px 14px",borderRadius:2,marginBottom:8}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div>
-                <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#f5eedd"}}>{r.date}</div>
-                <div style={{fontSize:12,color:"#2ecc71",marginTop:2}}>{r.time} – {r.timeEnd}</div>
-              </div>
-              {r.source==="request"
-                ?<button className="btn-red" onClick={()=>{
-                    if(window.confirm(`Cancel your session on ${r.date} at ${r.time}?`)){
-                      handleClientCancel(r.id);
-                    }
-                 
-        <button className="btn-gold" onClick={()=>{
-          setPortalView(null);
-          const activeTrainers = TRAINERS.filter(t=>trainerIsActive(t,today));
-          setCView(activeTrainers.length>1?"trainerSelect":"calendar");
-        }} style={{width:"100%",padding:"14px",fontSize:11,borderRadius:2,marginTop:8}}>
-          + BOOK NEW SESSION
-        </button>
-      </div>
-    )}
-
-    {portalTab==="past"&&(
-      <div>
-        {past.length===0
-          ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO PAST SESSIONS</div>
-          :past.map(r=>(
-          <div key={r.id} style={{background:"#221e18",border:"1px solid #3a332a",borderLeft:"3px solid #4a4135",padding:"12px 14px",borderRadius:2,marginBottom:6}}>
-            <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#a89878"}}>{r.date}</div>
-            <div style={{fontSize:12,color:"#6a5d48",marginTop:2}}>{r.time} – {r.timeEnd}</div>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-);                                  }
-                                
-
-                      <button className="btn-gold" onClick={()=>{
-                        setPortalView(null);
-                        const activeTrainers = TRAINERS.filter(t=>trainerIsActive(t, today));
-                        setCView(activeTrainers.length>1 ? "trainerSelect" : "calendar");
-                      }}
-                        style={{width:"100%",padding:"14px",fontSize:11,borderRadius:2,marginBottom:20,marginTop:4}}>
-                        + BOOK NEW SESSION
-                      </button>
-
-                   
-            )}
-            {cView==="cancelled"&&(
-              <div className="fade" style={{textAlign:"center",paddingTop:60}}>
-                <div style={{fontSize:48,marginBottom:16}}>✓</div>
-                <div style={{fontFamily:"'Cinzel',serif",fontSize:16,color:"#e8c66e",letterSpacing:3,marginBottom:12}}>SESSION CANCELLED</div>
-                <div style={{color:"#a89878",lineHeight:1.9,fontSize:13,marginBottom:40}}>
-                  Your session has been cancelled.<br/>Other clients have been notified of the open slot.
-                </div>
-                <button className="btn-ghost" onClick={()=>{setCView("calendar");setSelectedDate(null);}} style={{padding:"14px 32px",fontSize:10,borderRadius:2}}>BACK TO CALENDAR</button>
+                  return(
+                    <div>
+                      <div style={{display:"flex",gap:0,marginBottom:16,border:"1px solid #4a4135",borderRadius:2,overflow:"hidden"}}>
+                        {[["upcoming","UPCOMING"],["past","PAST"]].map(([v,label])=>(
+                          <button key={v} onClick={()=>setPortalTab(v)}
+                            style={{flex:1,padding:"9px",background:portalTab===v?"#e8c66e":"transparent",color:portalTab===v?"#1c1916":"#a89878",border:"none",fontFamily:"'Cinzel',serif",fontSize:9,letterSpacing:2,cursor:"pointer",textTransform:"uppercase",transition:"all 0.2s"}}>
+                            {label} {v==="upcoming"?`(${upcoming.length})`:`(${past.length})`}
+                          </button>
+                        ))}
+                      </div>
+                      {portalTab==="upcoming"&&(
+                        <div>
+                          {upcoming.length===0
+                            ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO UPCOMING SESSIONS</div>
+                            :upcoming.map(r=>(
+                            <div key={r.id} style={{background:"#2c2620",border:"1px solid #4a4135",borderLeft:"3px solid #2ecc71",padding:"12px 14px",borderRadius:2,marginBottom:8}}>
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                                <div>
+                                  <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#f5eedd"}}>{r.date}</div>
+                                  <div style={{fontSize:12,color:"#2ecc71",marginTop:2}}>{r.time} – {r.timeEnd}</div>
+                                </div>
+                                {r.source==="request"
+                                  ?<button className="btn-red" onClick={()=>{if(window.confirm(`Cancel your session on ${r.date} at ${r.time}?`)){handleClientCancel(r.id);}}} style={{padding:"8px 14px",fontSize:10,borderRadius:2}}>CANCEL</button>
+                                  :<span style={{fontSize:9,color:"#a89878",letterSpacing:1}}>SCHEDULED</span>
+                                }
+                              </div>
+                            </div>
+                          ))}
+                          <button className="btn-gold" onClick={()=>{setPortalView(null);const activeTrainers=TRAINERS.filter(t=>trainerIsActive(t,today));setCView(activeTrainers.length>1?"trainerSelect":"calendar");}} style={{width:"100%",padding:"14px",fontSize:11,borderRadius:2,marginTop:8}}>+ BOOK NEW SESSION</button>
+                        </div>
+                      )}
+                      {portalTab==="past"&&(
+                        <div>
+                          {past.length===0
+                            ?<div style={{textAlign:"center",padding:"30px 0",color:"#a89878",fontFamily:"'Cinzel',serif",letterSpacing:2,fontSize:10}}>NO PAST SESSIONS</div>
+                            :past.map(r=>(
+                            <div key={r.id} style={{background:"#221e18",border:"1px solid #3a332a",borderLeft:"3px solid #4a4135",padding:"12px 14px",borderRadius:2,marginBottom:6}}>
+                              <div style={{fontFamily:"'Cinzel',serif",fontSize:12,color:"#a89878"}}>{r.date}</div>
+                              <div style={{fontSize:12,color:"#6a5d48",marginTop:2}}>{r.time} – {r.timeEnd}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
             {cView==="submitted"&&(
