@@ -1676,8 +1676,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                     </div>
                   );
                 })()}
-              </div>
-            )}
+           
             {cView==="submitted"&&(
               <div className="fade" style={{textAlign:"center",paddingTop:60}}>
                 <div style={{fontSize:48,marginBottom:16}}>⚡</div>
