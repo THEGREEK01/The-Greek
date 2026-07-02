@@ -644,7 +644,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
       setPortalView("portal");
       setPortalError(false);
       setPortalCode("");
-      setPortalTab("upcoming");
+      setPortalTab("book");
     } else {
       setPortalError(true);
       setTimeout(()=>setPortalError(false), 2000);
