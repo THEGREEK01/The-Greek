@@ -1530,20 +1530,7 @@ setClientForm({name:"",phone:"",code:""});setSelectedSlot(null);setRecurring(fal
                         + BOOK NEW SESSION
                       </button>
 
-                      {past.length>0&&(
-                        <>
-                          <div className="sec-title">PAST SESSIONS<div className="sec-line"/></div>
-                          {past.slice(0,5).map(r=>(
-                            <div key={r.id} style={{background:"#221e18",border:"1px solid #3a332a",padding:"10px 14px",borderRadius:2,marginBottom:6}}>
-                              <div style={{fontFamily:"'Cinzel',serif",fontSize:11,color:"#a89878"}}>{r.date} · {r.time}–{r.timeEnd}</div>
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
+                   
             )}
             {cView==="cancelled"&&(
               <div className="fade" style={{textAlign:"center",paddingTop:60}}>
